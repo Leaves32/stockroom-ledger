@@ -1,0 +1,1101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stockroom Ledger</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a working ledger. Slim header band, tab rail, one work surface per task. SKUs and quantities set in mono, like a packing slip. Stickers render as white physical labels in both themes. Charts use a validated categorical order, fixed per entity. */
+:root{
+  --bg:#f2f3f1; --surface:#ffffff; --surface-2:#eaecea; --ink:#1c2220; --muted:#5b6561; --line:#d5d9d6;
+  --accent:#1f5f8b; --accent-ink:#ffffff;
+  --in:#2c7a4c; --in-bg:#e2f0e7; --out:#b0502a; --out-bg:#f7e6dd; --adj:#5f51a0; --adj-bg:#ebe8f6;
+  --warn:#9a6400; --warn-bg:#faefd4; --bad:#b3261e; --bad-bg:#fbe2df;
+  --sticker-bg:#ffffff; --sticker-ink:#111111; --sticker-rule:#b9b9b9;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s-other:#b4b2a9; --s-free:#e1e3de;
+  --display:'Barlow Condensed','Arial Narrow',sans-serif;
+  --body:'Barlow',system-ui,-apple-system,'Segoe UI','PingFang TC','Microsoft JhengHei',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#131716; --surface:#1b201f; --surface-2:#242b29; --ink:#e6ebe9; --muted:#9aa6a1; --line:#333c39;
+  --accent:#6aa9d6; --accent-ink:#0b1822;
+  --in:#7cc89b; --in-bg:#1c3226; --out:#e69b75; --out-bg:#39251c; --adj:#b4a8e8; --adj-bg:#29243f;
+  --warn:#e8b54a; --warn-bg:#382d13; --bad:#f08a82; --bad-bg:#3c1e1c;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s-other:#6b6a64; --s-free:#2c3230; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#131716; --surface:#1b201f; --surface-2:#242b29; --ink:#e6ebe9; --muted:#9aa6a1; --line:#333c39;
+  --accent:#6aa9d6; --accent-ink:#0b1822;
+  --in:#7cc89b; --in-bg:#1c3226; --out:#e69b75; --out-bg:#39251c; --adj:#b4a8e8; --adj-bg:#29243f;
+  --warn:#e8b54a; --warn-bg:#382d13; --bad:#f08a82; --bad-bg:#3c1e1c;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s-other:#6b6a64; --s-free:#2c3230; color-scheme:dark;}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--body);}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));}
+header{background:var(--surface);border-bottom:1px solid var(--line);}
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;padding-block:14px 6px;}
+h1{font:700 28px/1 var(--display);letter-spacing:.03em;text-transform:uppercase;margin:0;text-wrap:balance;}
+.tag{display:inline-block;font:500 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:4px 6px;border:1px dashed var(--warn);color:var(--warn);border-radius:3px;margin-left:8px;vertical-align:4px;}
+.sub{margin:4px 0 0;color:var(--muted);font-size:13px;}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;}
+.field{display:grid;gap:4px;min-width:0;align-content:start;}
+.field label{font-size:13px;color:var(--muted);font-weight:500;}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 10px;min-width:0;width:100%;}
+textarea{min-height:66px;resize:vertical;font-size:14px;line-height:1.4;}
+textarea.csv{min-height:120px;font:12px/1.4 var(--mono);}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.7;}
+#staff{width:150px;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+.seg button{font:600 13px var(--body);border:0;background:transparent;color:var(--muted);padding:8px 11px;cursor:pointer;}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;padding-block:6px 10px;scrollbar-width:thin;}
+.tabs button{border:0;background:transparent;font:600 15px var(--body);color:var(--muted);padding:8px 12px;border-radius:6px;white-space:nowrap;cursor:pointer;}
+.tabs button:hover{color:var(--ink);background:var(--surface-2);}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);}
+.tabs .badge{display:inline-block;min-width:18px;padding:1px 5px;margin-left:6px;border-radius:999px;background:var(--warn-bg);color:var(--warn);font:500 11px/1.4 var(--mono);text-align:center;}
+main .wrap{display:grid;gap:16px;padding-block:20px 28px;}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;min-width:0;}
+.panel.review{border:2px solid var(--accent);}
+h2{font:700 22px/1.1 var(--display);letter-spacing:.03em;text-transform:uppercase;margin:0 0 4px;}
+h3{font:600 16px/1.3 var(--body);margin:18px 0 6px;}
+.lede{color:var(--muted);margin:0 0 14px;max-width:70ch;}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}
+@media (max-width:720px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr));}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0;}
+.kpi b{display:block;font:500 30px/1.1 var(--mono);font-variant-numeric:tabular-nums;}
+.kpi b.txt{font:600 19px/1.25 var(--body);overflow-wrap:anywhere;}
+.kpi span{color:var(--muted);font-size:13px;}
+.kpi.attn b{color:var(--warn);}
+.tablewrap{overflow-x:auto;margin-top:8px;}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;}
+th{font:500 11px/1.2 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap;}
+td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:middle;}
+tr:last-child td{border-bottom:0;}
+tr.sel td{background:var(--surface-2);}
+.num{text-align:right;}
+.mono{font-family:var(--mono);font-size:13.5px;}
+.muted{color:var(--muted);}
+.pill{display:inline-block;font:500 11px/1 var(--mono);letter-spacing:.05em;text-transform:uppercase;padding:4px 7px;border-radius:999px;white-space:nowrap;}
+.pill.ok,.pill.IN{background:var(--in-bg);color:var(--in);}
+.pill.low{background:var(--warn-bg);color:var(--warn);}
+.pill.out{background:var(--bad-bg);color:var(--bad);}
+.pill.OUT{background:var(--out-bg);color:var(--out);}
+.pill.ADJ{background:var(--adj-bg);color:var(--adj);}
+.pill.OPEN{background:var(--surface-2);color:var(--muted);}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+.scan{display:flex;gap:8px;}
+.scan input{font-family:var(--mono);}
+.btn{font:600 14px var(--body);border-radius:6px;padding:9px 14px;cursor:pointer;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);white-space:nowrap;}
+.btn:hover{border-color:var(--muted);}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:var(--surface);}
+.btn.small{padding:5px 9px;font-size:13px;}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+.qty{width:84px;text-align:right;font-family:var(--mono);}
+.lotin{width:120px;font-family:var(--mono);}
+.err{color:var(--bad);font-size:13px;margin:6px 0 0;}
+.check{margin-top:14px;padding:12px 14px;border-radius:8px;background:var(--surface-2);font-size:14px;}
+.check ul{margin:4px 0 0;padding-left:18px;}
+.check .head{font-weight:600;}
+.good{color:var(--in);font-weight:600;}
+.bad{color:var(--bad);font-weight:600;}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;}
+dl.sum{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:0 0 6px;}
+dl.sum dt{color:var(--muted);font-size:13px;}
+dl.sum dd{margin:0;font-weight:500;min-width:0;}
+.chips{display:flex;flex-wrap:wrap;gap:8px;}
+.chips button{font:500 14px var(--body);border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 12px;border-radius:999px;cursor:pointer;}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+.vpos{color:var(--in);font-weight:600;}
+.vneg{color:var(--bad);font-weight:600;}
+.note{font-size:13px;color:var(--muted);border-left:3px solid var(--warn);padding-left:10px;max-width:80ch;}
+.banner{padding:10px 12px;border-radius:8px;font-size:14px;font-weight:500;margin:0 0 12px;}
+.banner.drug{background:var(--bad-bg);color:var(--bad);}
+.banner.claim{background:var(--warn-bg);color:var(--warn);}
+.ws{display:grid;grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:20px;align-items:start;margin-top:12px;}
+@media (max-width:780px){.ws{grid-template-columns:minmax(0,1fr);}}
+.req ul{list-style:none;padding:0;margin:6px 0 0;display:grid;gap:4px;font-size:14px;}
+.req .count{font:500 13px var(--mono);}
+.sticker{background:var(--sticker-bg);color:var(--sticker-ink);border:1px solid var(--line);border-radius:6px;padding:12px 14px;font:11px/1.35 var(--body);width:100%;max-width:400px;}
+.sticker .nm{font:700 15px/1.15 var(--body);}
+.sticker .nmfr{font:italic 500 13px/1.2 var(--body);margin-top:1px;}
+.sticker .net{font:600 13px var(--body);margin-top:4px;}
+.sticker .rule{border-top:1px solid var(--sticker-rule);margin:6px 0;}
+.sticker b{font-weight:700;}
+.sticker .two{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.sticker .foot{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-top:6px;}
+.sticker .code{font:500 10px/1.3 var(--mono);text-align:right;}
+.sticker .missing{color:#b3261e;font-style:italic;}
+.sizecap{font:500 11px var(--mono);color:var(--muted);margin-top:6px;letter-spacing:.04em;}
+/* charts */
+.charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+@media (max-width:820px){.charts{grid-template-columns:minmax(0,1fr);}}
+.chart h3{margin:0 0 2px;}
+.chart .csub{color:var(--muted);font-size:13px;margin:0 0 10px;}
+.pie{display:flex;flex-wrap:wrap;gap:16px 20px;align-items:center;}
+.pie svg{flex:none;max-width:100%;height:auto;}
+.pie .c-total{font:500 26px var(--mono);fill:var(--ink);}
+.pie .c-unit{font:500 12px var(--body);fill:var(--muted);}
+.legend{list-style:none;margin:0;padding:0;display:grid;gap:6px;flex:1 1 200px;min-width:0;font-size:14px;}
+.legend li{display:grid;grid-template-columns:12px minmax(0,1fr) auto 3.4em;gap:8px;align-items:center;}
+.legend .sw{width:12px;height:12px;border-radius:3px;}
+.legend .lg{overflow-wrap:anywhere;}
+.legend .v{font:500 13.5px var(--mono);text-align:right;}
+.legend .p{font:400 12.5px var(--mono);color:var(--muted);text-align:right;}
+.empty{padding:28px 12px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:8px;}
+.blegend{display:flex;gap:16px;font-size:13px;color:var(--muted);margin:0 0 6px;}
+.blegend span{display:inline-flex;align-items:center;gap:6px;}
+.blegend i{display:inline-block;width:12px;height:12px;border-radius:3px;}
+.axis{font:500 10.5px var(--mono);fill:var(--muted);}
+.gridl{stroke:var(--line);stroke-width:1;}
+.meter{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;min-width:80px;}
+.meter i{display:block;height:100%;border-radius:4px;}
+.tip{position:fixed;z-index:30;pointer-events:none;background:var(--ink);color:var(--bg);font:500 13px/1.35 var(--body);padding:7px 10px;border-radius:6px;max-width:260px;}
+[data-tip]{cursor:default;}
+footer .wrap{display:grid;gap:10px;padding-block:0 32px;}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:500;max-width:calc(100% - 32px);z-index:20;}
+.confirm{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--bad);border-radius:8px;}
+@media (max-width:520px){h1{font-size:24px;} .panel{padding:14px;} .sticker .two{grid-template-columns:1fr;}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important;}}
+</style>
+</head>
+<body>
+
+
+<header>
+  <div class="wrap top">
+    <div>
+      <h1>Stockroom Ledger<span class="tag" id="t-sample"></span></h1>
+      <p class="sub" id="t-sub"></p>
+    </div>
+    <div class="controls">
+      <div class="field"><label for="staff" id="t-rec"></label><input id="staff" autocomplete="off"></div>
+      <div class="seg" role="group" aria-label="Language">
+        <button type="button" id="lang-en" data-lang="en">EN</button>
+        <button type="button" id="lang-zh" data-lang="zh">简体</button>
+        <button type="button" id="lang-zht" data-lang="zht">繁體</button>
+      </div>
+    </div>
+  </div>
+  <div class="wrap"><nav class="tabs" id="tabs" role="tablist"></nav></div>
+</header>
+
+<main><div class="wrap" id="view"></div></main>
+
+<footer><div class="wrap">
+  <p class="note" id="t-demo"></p>
+  <div id="reset-area"></div>
+</div></footer>
+
+<datalist id="skulist"></datalist>
+<div id="tip" class="tip" role="tooltip" hidden></div>
+<div id="toast" role="status" hidden></div>
+
+<script>
+const KEY='stockroom-ledger-demo-v4';
+const DAY=864e5;
+const TABS=['stock','reports','receive','labels','ship','count','customers','ledger'];
+
+const I18N={
+en:{sample:'Sample data',sub:'Stock in and out for hair care and beauty, tied to retail customers. Demo for review.',rec:'Recording as',
+tab_stock:'Stock on hand',tab_reports:'Reports',tab_receive:'Stock in',tab_labels:'Labels',tab_ship:'Stock out',tab_count:'Stock count',tab_customers:'Customers',tab_ledger:'Ledger',
+kpiProducts:'Products tracked',kpiLow:'Below minimum',kpiAwait:'Cases awaiting stickers',kpiOut:'Shipments today',
+stockLede:'Balances are worked out from every posted movement, so they always add up. Cases still waiting for Canadian stickers are held back, so only labelled stock counts as available.',
+search:'Search SKU or item',sku:'SKU',item:'Item',loc:'Location',onhand:'On hand',awaiting:'Awaiting labels',available:'Available',min:'Min',status:'Status',qty:'Qty',after:'After',
+ordered:'Ordered',picked:'Picked',check:'Check',system:'System',counted:'Counted',variance:'Variance',lot:'Lot',
+time:'Time',type:'Type',ref:'Reference',partner:'Customer / supplier',by:'By',items:'Items',
+st_ok:'OK',st_low:'Low',st_out:'Out',
+supplier:'Supplier',customer:'Customer',choose:'Choose…',refIn:'Packing slip / PO #',refOut:'Customer PO / invoice #',
+scanLabel:'Scan or type a SKU, then press Enter',add:'Add',note:'Note (optional)',remove:'Remove',lotPh:'Lot / batch',
+inLede:'Record goods as they arrive, in cases. Scan each SKU, check the quantities against the packing slip, and note the lot. Stickers are queued in Labels automatically.',
+outLede:'Enter the retailer’s PO, then count what was actually picked. It can only be posted when every line matches and there is enough labelled stock.',
+emptyLines:'No items yet. Scan or type a SKU to start.',
+checkHead:'Before you can review:',ready:'Everything checks out. Ready to review.',
+review:'Review',post:'Post to ledger',back:'Edit',reviewTitle:'Review before posting',
+reviewIn:'Compare the goods on the dock with the packing slip one more time.',
+reviewOut:'Compare the picked goods with the PO one more time before they leave.',
+when:'When',
+errNoStaff:'Enter your name in "Recording as" at the top.',errPartnerIn:'Choose the supplier.',errPartnerOut:'Choose the customer.',
+errRef:'Enter the reference number from the paperwork.',errNoLines:'Add at least one item.',
+errQty:'Every quantity must be a whole number above 0.',errAvail:'Not enough labelled stock for: ',errPick:'Picked count does not match the PO for: ',
+errUnknownSku:'No product with SKU ',
+stShort:'Short by ',stPick:'Count picked',stMismatch:'Does not match',stMatch:'Matched',
+postedIn:'Received. Stickers are queued in Labels.',postedOut:'Shipped and posted to the ledger.',
+labelsLede:'Goods arrive in Korean or Japanese packaging. Every unit needs a bilingual Canadian sticker before it can ship, so stock in this queue is held back from Stock out.',
+queue:'Sticker queue',queueEmpty:'Nothing is waiting for stickers.',cases:'Cases',units:'Units',toPrint:'Stickers',open:'Open',
+jb_print:'To print',jb_apply:'Apply & check',jb_hold:'Hold',
+release:'Check and release',jobFor:'Batch',unitsPerCase:'per case',spare:'includes spares for misprints',
+markPrinted:'Mark batch printed',printedNote:'In the real version this sends the batch to the label printer.',
+scanProduct:'Scan the product barcode',scanSticker:'Scan the sticker code',fillScan:'Fill sample scans',
+pOk:'Barcode matches this product.',pWrong:'This barcode belongs to a different product: ',pUnknown:'Barcode not recognised.',
+sOk:'Sticker matches this batch.',sWrong:'Wrong sticker. It belongs to: ',sUnknown:'Sticker code not recognised.',
+needPrint:'Print the batch first.',needData:'Complete the required label data (see checklist).',needDrug:'This product cannot be released until it has a DIN or NPN.',
+needScanP:'Scan a unit’s product barcode.',needScanS:'Scan the sticker you are about to apply.',
+canRelease:'All checks passed. Apply the stickers, then release.',confirmRelease:'Confirm labelled and release',close:'Close',
+released:'Labelled. The stock is now available to ship.',recent:'Recently released',
+workspace:'Sticker preview and label data',previewFor:'Product',reqTitle:'Required on the sticker',
+importer:'Importer (printed as “Imported by / Importé par”)',importerHint:'Must match the name and address on the Health Canada cosmetic notification.',
+f_nameEn:'Product name (English)',f_nameFr:'Product name (French)',f_netQty:'Net quantity',f_inci:'Ingredients (INCI names)',
+f_dirEn:'Directions (English)',f_dirFr:'Directions (French)',f_warnEn:'Warnings (English)',f_warnFr:'Warnings (French)',
+f_allergens:'Fragrance allergens',f_origin:'Country of origin',f_size:'Sticker size',f_ean:'Product barcode (EAN-13)',
+r_identity:'Product identity in English and French',r_net:'Net quantity in metric units',r_importer:'Importer name and address',r_inci:'Ingredient list with INCI names',
+r_dir:'Directions in English and French',r_warn:'Warnings in English and French',r_allergens:'Fragrance allergens declared (from April 12, 2026)',r_origin:'Country of origin',r_ean:'Scannable product barcode',
+flagDrug:'Hold: sunscreens are regulated as drugs in Canada and need a DIN or NPN before sale. A sticker cannot fix this.',
+flagClaim:'Check first: a “hair loss” claim can make a product a drug or natural health product in Canada.',
+labelDisclaimer:'Checklist based on general Health Canada guidance. Ingredient lists here are placeholders. Confirm the real wording with the supplier and a regulatory consultant before printing for sale.',
+reportsLede:'Where stock came from and where it went, for the period you choose, plus how full the warehouse is right now. All figures are in cases.',
+period:'Period',d7:'7 days',d14:'14 days',d30:'30 days',
+kIn:'Cases received',kOut:'Cases shipped',kTop:'Top customer',kSpace:'Warehouse space used',
+chIn:'Stock in by category',chInSub:'Cases received, grouped by product category.',
+chOut:'Stock out by category',chOutSub:'Cases shipped, grouped by product category.',
+chCust:'Sales by customer',chCustSub:'Cases shipped to each retailer.',
+chSpace:'Warehouse capacity',chSpaceSub:'Cases on the shelf in each zone, and the space still free.',
+chDaily:'Cases in and out per day',chDailySub:'Daily totals for the period. Hover a bar for the figure.',
+casesUnit:'cases',noData:'No movement in this period.',other:'Other',
+cat_shampoo:'Shampoo',cat_skin:'Skincare',cat_sun:'Sun care',cat_lip:'Lip care',
+zone_A:'Zone A · hair care',zone_B:'Zone B · skincare',zone_C:'Zone C · K-beauty',free:'Free space',
+zone:'Zone',capacity:'Capacity',used:'Used',fill:'Fill',
+legendIn:'In',legendOut:'Out',
+pieNote:'Pie charts show how a whole splits into parts. To compare parts exactly, read the figures beside each chart.',
+countLede:'Enter what is physically on the shelf. Any difference is posted as an adjustment, with your reason, so the books match the shelf again.',
+countHint:'Leave a row blank if you did not count it.',reason:'Reason for differences',postAdj:'Post adjustments',
+errReason:'Enter a reason for the differences.',errCount:'Counted quantities must be whole numbers.',noVar:'No differences to post.',postedCount:'Count posted. Adjusted items: ',
+custLede:'Every shipment is tied to a retail customer, so you can see who took what, and when.',
+contact:'Contact',phone:'Phone',orders:'Orders',lastOrder:'Last order',totals:'Totals by item',history:'Shipment history',
+noOrders:'No shipments yet.',addCustomer:'Add a customer',custName:'Business name',saveCust:'Save customer',
+errCustName:'Enter the business name.',custSaved:'Customer added. They now appear in Stock out.',
+ledgerLede:'Every movement is kept. Nothing is edited or deleted; corrections are posted as adjustments.',
+all:'All',T_IN:'In',T_OUT:'Out',T_ADJ:'Adjust',T_OPEN:'Opening',
+copyCsv:'Copy as CSV',copied:'Copied. Paste it into Excel or Google Sheets.',copyFail:'Copying is blocked here. Select the text below and copy it.',
+none:'No records yet.',
+demo:'Demo only: entries are saved in this browser. A real version would use one shared database and a label printer, so every staff member sees the same numbers.',
+reset:'Reset sample data',resetQ:'This clears everything you entered and restores the sample data.',resetYes:'Reset',cancel:'Cancel',resetDone:'Sample data restored.'},
+zh:{/*ZH_BEGIN*/sample:'示例数据',sub:'洗护和美妆产品的进出库记录，对应到零售客户。演示版。',rec:'记录人',
+tab_stock:'当前库存',tab_reports:'统计报表',tab_receive:'入库',tab_labels:'贴标',tab_ship:'出库',tab_count:'盘点',tab_customers:'客户',tab_ledger:'流水记录',
+kpiProducts:'在库商品',kpiLow:'低于安全库存',kpiAwait:'待贴标箱数',kpiOut:'今日出库单',
+stockLede:'库存数量由所有已入账的进出记录自动算出，所以永远对得上。还没贴加拿大标签的货会被暂扣，只有贴好标签的才算「可出库」。',
+search:'搜索货号或品名',sku:'货号',item:'品名',loc:'库位',onhand:'现有库存',awaiting:'待贴标',available:'可出库',min:'安全库存',status:'状态',qty:'数量',after:'入账后',
+ordered:'订单数量',picked:'实拣数量',check:'核对',system:'系统数量',counted:'实盘数量',variance:'差异',lot:'批次',
+time:'时间',type:'类型',ref:'单号',partner:'客户/供应商',by:'记录人',items:'明细',
+st_ok:'正常',st_low:'偏低',st_out:'缺货',
+supplier:'供应商',customer:'客户',choose:'请选择…',refIn:'送货单/采购单号',refOut:'客户采购单/发票号',
+scanLabel:'扫码或输入货号，然后按回车',add:'添加',note:'备注（可选）',remove:'移除',lotPh:'批次号',
+inLede:'到货时按「箱」登记。逐一扫码，对照送货单核对数量，并填写批次号。系统会自动在「贴标」里生成贴标任务。',
+outLede:'先录入零售商的采购单，再填写实际拣货数量。每一行都一致、而且已贴标的库存够用，才能入账。',
+emptyLines:'还没有商品。请扫码或输入货号开始。',
+checkHead:'核对前还需要：',ready:'全部无误，可以进入核对。',
+review:'核对',post:'确认入账',back:'返回修改',reviewTitle:'入账前核对',
+reviewIn:'请再对照一次送货单和实物。',reviewOut:'货物出门前，请再对照一次采购单和已拣货物。',
+when:'时间',
+errNoStaff:'请在页面顶部填写「记录人」。',errPartnerIn:'请选择供应商。',errPartnerOut:'请选择客户。',
+errRef:'请填写单据上的单号。',errNoLines:'请至少添加一件商品。',
+errQty:'每个数量都必须是大于 0 的整数。',errAvail:'已贴标库存不足：',errPick:'实拣数量与采购单不符：',
+errUnknownSku:'找不到货号 ',
+stShort:'缺 ',stPick:'待清点',stMismatch:'数量不符',stMatch:'一致',
+postedIn:'已入库，贴标任务已加入「贴标」页。',postedOut:'已出库并入账。',
+labelsLede:'货物到港时是韩文或日文包装。每一件都要贴上加拿大双语标签才能出货，所以在这个队列里的库存会被暂扣，不能出库。',
+queue:'贴标队列',queueEmpty:'目前没有待贴标的货。',cases:'箱数',units:'件数',toPrint:'标签数',open:'打开',
+jb_print:'待打印',jb_apply:'待贴标核对',jb_hold:'暂停',
+release:'核对并放行',jobFor:'批次任务',unitsPerCase:'件/箱',spare:'含少量备用，以防打印出错',
+markPrinted:'标记为已打印',printedNote:'正式版本里，这一步会把整批标签发送到标签打印机。',
+scanProduct:'扫描商品条形码',scanSticker:'扫描标签上的条码',fillScan:'填入示例扫码',
+pOk:'条形码与这个商品一致。',pWrong:'这个条形码属于另一个商品：',pUnknown:'无法识别这个条形码。',
+sOk:'标签与这个批次一致。',sWrong:'标签贴错了，它属于：',sUnknown:'无法识别这个标签条码。',
+needPrint:'请先打印这批标签。',needData:'请先补全必需的标签资料（见右侧清单）。',needDrug:'这个产品在取得 DIN 或 NPN 之前不能放行。',
+needScanP:'请扫描一件商品的条形码。',needScanS:'请扫描准备贴上去的标签。',
+canRelease:'全部核对通过。贴好标签后即可放行。',confirmRelease:'确认已贴标并放行',close:'关闭',
+released:'已贴标，这批货现在可以出库了。',recent:'最近放行',
+workspace:'标签预览与资料',previewFor:'商品',reqTitle:'标签上必须有',
+importer:'进口商（标签上印为「Imported by / Importé par」）',importerHint:'必须与向 Health Canada 提交的化妆品备案里的名称和地址一致。',
+f_nameEn:'产品名称（英文）',f_nameFr:'产品名称（法文）',f_netQty:'净含量',f_inci:'成分（INCI 名称）',
+f_dirEn:'使用方法（英文）',f_dirFr:'使用方法（法文）',f_warnEn:'警示语（英文）',f_warnFr:'警示语（法文）',
+f_allergens:'香料过敏原',f_origin:'原产地',f_size:'标签尺寸',f_ean:'商品条形码（EAN-13）',
+r_identity:'英法双语的产品名称',r_net:'公制单位的净含量',r_importer:'进口商名称和地址',r_inci:'使用 INCI 名称的成分表',
+r_dir:'英法双语的使用方法',r_warn:'英法双语的警示语',r_allergens:'香料过敏原声明（2026 年 4 月 12 日起）',r_origin:'原产地',r_ean:'可扫描的商品条形码',
+flagDrug:'暂停：在加拿大，防晒产品按药品管理，销售前必须有 DIN 或 NPN。贴标签解决不了这个问题。',
+flagClaim:'请先确认：在加拿大，「防脱发」这类宣称可能让产品被归为药品或天然健康产品。',
+labelDisclaimer:'清单依据 Health Canada 的一般性指引整理。这里的成分表只是占位示例。正式打印销售前，请向供应商和法规顾问确认实际内容。',
+reportsLede:'按所选时间段统计货从哪里来、发到哪里去，以及仓库现在有多满。所有数字的单位都是「箱」。',
+period:'时间段',d7:'7 天',d14:'14 天',d30:'30 天',
+kIn:'入库箱数',kOut:'出库箱数',kTop:'最大客户',kSpace:'仓库空间使用率',
+chIn:'入库：按品类',chInSub:'入库箱数，按产品品类分组。',
+chOut:'出库：按品类',chOutSub:'出库箱数，按产品品类分组。',
+chCust:'销售：按客户',chCustSub:'发给每个零售商的箱数。',
+chSpace:'仓库容量',chSpaceSub:'各区域货架上的箱数，以及还剩多少空间。',
+chDaily:'每日进出库箱数',chDailySub:'所选时间段内每天的合计。把鼠标移到柱子上可以看具体数字。',
+casesUnit:'箱',noData:'这段时间没有进出记录。',other:'其他',
+cat_shampoo:'洗发水',cat_skin:'护肤',cat_sun:'防晒',cat_lip:'唇部护理',
+zone_A:'A 区 · 洗护',zone_B:'B 区 · 护肤',zone_C:'C 区 · 韩妆',free:'空余空间',
+zone:'区域',capacity:'容量',used:'已用',fill:'使用率',
+legendIn:'入库',legendOut:'出库',
+pieNote:'饼图适合看「整体怎么分成几部分」。要精确比较各部分，请看每张图旁边的数字。',
+countLede:'填写货架上的实际数量。有差异的商品会连同原因记为「调整」，让账面和实物重新一致。',
+countHint:'没有盘点的商品留空即可。',reason:'差异原因',postAdj:'调整入账',
+errReason:'请填写差异原因。',errCount:'实盘数量必须是整数。',noVar:'没有差异需要入账。',postedCount:'盘点已入账，调整的商品：',
+custLede:'每一笔出库都对应到零售客户，可以随时查到谁在什么时候拿了什么。',
+contact:'联系人',phone:'电话',orders:'订单数',lastOrder:'最近一次',totals:'按商品汇总',history:'出库记录',
+noOrders:'暂无出库记录。',addCustomer:'新增客户',custName:'客户名称',saveCust:'保存客户',
+errCustName:'请填写客户名称。',custSaved:'客户已添加，出库时可以直接选择。',
+ledgerLede:'所有进出记录都会保留，不能修改或删除；更正一律以「调整」入账。',
+all:'全部',T_IN:'入库',T_OUT:'出库',T_ADJ:'调整',T_OPEN:'期初',
+copyCsv:'复制为 CSV',copied:'已复制，可以粘贴到 Excel 或 Google 表格。',copyFail:'这里无法自动复制，请手动选中下方文字复制。',
+none:'暂无记录。',
+demo:'仅为演示：数据保存在当前浏览器里。正式版本会使用共享数据库并连接标签打印机，所有员工看到的是同一套数字。',
+reset:'重置示例数据',resetQ:'这会清除你输入的所有内容，恢复示例数据。',resetYes:'重置',cancel:'取消',resetDone:'已恢复示例数据。'/*ZH_END*/},
+zht:{sample:'示例數據',sub:'洗護和美妝產品的進出庫記錄，對應到零售客戶。演示版。',rec:'記錄人',
+tab_stock:'當前庫存',tab_reports:'統計報表',tab_receive:'入庫',tab_labels:'貼標',tab_ship:'出庫',tab_count:'盤點',tab_customers:'客戶',tab_ledger:'流水記錄',
+kpiProducts:'在庫商品',kpiLow:'低於安全庫存',kpiAwait:'待貼標箱數',kpiOut:'今日出庫單',
+stockLede:'庫存數量由所有已入賬的進出記錄自動算出，所以永遠對得上。還沒貼加拿大標籤的貨會被暫扣，只有貼好標籤的纔算「可出庫」。',
+search:'搜索貨號或品名',sku:'貨號',item:'品名',loc:'庫位',onhand:'現有庫存',awaiting:'待貼標',available:'可出庫',min:'安全庫存',status:'狀態',qty:'數量',after:'入賬後',
+ordered:'訂單數量',picked:'實揀數量',check:'覈對',system:'系統數量',counted:'實盤數量',variance:'差異',lot:'批次',
+time:'時間',type:'類型',ref:'單號',partner:'客戶/供應商',by:'記錄人',items:'明細',
+st_ok:'正常',st_low:'偏低',st_out:'缺貨',
+supplier:'供應商',customer:'客戶',choose:'請選擇…',refIn:'送貨單/採購單號',refOut:'客戶採購單/發票號',
+scanLabel:'掃碼或輸入貨號，然後按回車',add:'添加',note:'備註（可選）',remove:'移除',lotPh:'批次號',
+inLede:'到貨時按「箱」登記。逐一掃碼，對照送貨單核對數量，並填寫批次號。系統會自動在「貼標」裡生成貼標任務。',
+outLede:'先錄入零售商的採購單，再填寫實際揀貨數量。每一行都一致、而且已貼標的庫存夠用，才能入賬。',
+emptyLines:'還沒有商品。請掃碼或輸入貨號開始。',
+checkHead:'覈對前還需要：',ready:'全部無誤，可以進入覈對。',
+review:'覈對',post:'確認入賬',back:'返回修改',reviewTitle:'入賬前核對',
+reviewIn:'請再對照一次送貨單和實物。',reviewOut:'貨物出門前，請再對照一次採購單和已揀貨物。',
+when:'時間',
+errNoStaff:'請在頁面頂部填寫「記錄人」。',errPartnerIn:'請選擇供應商。',errPartnerOut:'請選擇客戶。',
+errRef:'請填寫單據上的單號。',errNoLines:'請至少添加一件商品。',
+errQty:'每個數量都必須是大於 0 的整數。',errAvail:'已貼標庫存不足：',errPick:'實揀數量與採購單不符：',
+errUnknownSku:'找不到貨號 ',
+stShort:'缺 ',stPick:'待清點',stMismatch:'數量不符',stMatch:'一致',
+postedIn:'已入庫，貼標任務已加入「貼標」頁。',postedOut:'已出庫併入賬。',
+labelsLede:'貨物到港時是韓文或日文包裝。每一件都要貼上加拿大雙語標籤才能出貨，所以在這個隊列裡的庫存會被暫扣，不能出庫。',
+queue:'貼標隊列',queueEmpty:'目前沒有待貼標的貨。',cases:'箱數',units:'件數',toPrint:'標籤數',open:'打開',
+jb_print:'待打印',jb_apply:'待貼標覈對',jb_hold:'暫停',
+release:'覈對並放行',jobFor:'批次任務',unitsPerCase:'件/箱',spare:'含少量備用，以防打印出錯',
+markPrinted:'標記為已打印',printedNote:'正式版本里，這一步會把整批標籤發送到標籤打印機。',
+scanProduct:'掃描商品條形碼',scanSticker:'掃描標籤上的條碼',fillScan:'填入示例掃碼',
+pOk:'條形碼與這個商品一致。',pWrong:'這個條形碼屬於另一個商品：',pUnknown:'無法識別這個條形碼。',
+sOk:'標籤與這個批次一致。',sWrong:'標籤貼錯了，它屬於：',sUnknown:'無法識別這個標籤條碼。',
+needPrint:'請先打印這批標籤。',needData:'請先補全必需的標籤資料（見右側清單）。',needDrug:'這個產品在取得 DIN 或 NPN 之前不能放行。',
+needScanP:'請掃描一件商品的條形碼。',needScanS:'請掃描準備貼上去的標籤。',
+canRelease:'全部覈對通過。貼好標籤後即可放行。',confirmRelease:'確認已貼標並放行',close:'關閉',
+released:'已貼標，這批貨現在可以出庫了。',recent:'最近放行',
+workspace:'標籤預覽與資料',previewFor:'商品',reqTitle:'標籤上必須有',
+importer:'進口商（標籤上印為「Imported by / Importé par」）',importerHint:'必須與向 Health Canada 提交的化妝品備案裡的名稱和地址一致。',
+f_nameEn:'產品名稱（英文）',f_nameFr:'產品名稱（法文）',f_netQty:'淨含量',f_inci:'成分（INCI 名稱）',
+f_dirEn:'使用方法（英文）',f_dirFr:'使用方法（法文）',f_warnEn:'警示語（英文）',f_warnFr:'警示語（法文）',
+f_allergens:'香料過敏原',f_origin:'原產地',f_size:'標籤尺寸',f_ean:'商品條形碼（EAN-13）',
+r_identity:'英法雙語的產品名稱',r_net:'公制單位的淨含量',r_importer:'進口商名稱和地址',r_inci:'使用 INCI 名稱的成分表',
+r_dir:'英法雙語的使用方法',r_warn:'英法雙語的警示語',r_allergens:'香料過敏原聲明（2026 年 4 月 12 日起）',r_origin:'原產地',r_ean:'可掃描的商品條形碼',
+flagDrug:'暫停：在加拿大，防曬產品按藥品管理，銷售前必須有 DIN 或 NPN。貼標籤解決不了這個問題。',
+flagClaim:'請先確認：在加拿大，「防脫髮」這類宣稱可能讓產品被歸為藥品或天然健康產品。',
+labelDisclaimer:'清單依據 Health Canada 的一般性指引整理。這裡的成分表只是佔位示例。正式打印銷售前，請向供應商和法規顧問確認實際內容。',
+reportsLede:'按所選時間段統計貨從哪裡來、發到哪裡去，以及倉庫現在有多滿。所有數字的單位都是「箱」。',
+period:'時間段',d7:'7 天',d14:'14 天',d30:'30 天',
+kIn:'入庫箱數',kOut:'出庫箱數',kTop:'最大客戶',kSpace:'倉庫空間使用率',
+chIn:'入庫：按品類',chInSub:'入庫箱數，按產品品類分組。',
+chOut:'出庫：按品類',chOutSub:'出庫箱數，按產品品類分組。',
+chCust:'銷售：按客戶',chCustSub:'發給每個零售商的箱數。',
+chSpace:'倉庫容量',chSpaceSub:'各區域貨架上的箱數，以及還剩多少空間。',
+chDaily:'每日進出庫箱數',chDailySub:'所選時間段內每天的合計。把鼠標移到柱子上可以看具體數字。',
+casesUnit:'箱',noData:'這段時間沒有進出記錄。',other:'其他',
+cat_shampoo:'洗髮水',cat_skin:'護膚',cat_sun:'防曬',cat_lip:'唇部護理',
+zone_A:'A 區 · 洗護',zone_B:'B 區 · 護膚',zone_C:'C 區 · 韓妝',free:'空餘空間',
+zone:'區域',capacity:'容量',used:'已用',fill:'使用率',
+legendIn:'入庫',legendOut:'出庫',
+pieNote:'餅圖適合看「整體怎麼分成幾部分」。要精確比較各部分，請看每張圖旁邊的數字。',
+countLede:'填寫貨架上的實際數量。有差異的商品會連同原因記為「調整」，讓賬面和實物重新一致。',
+countHint:'沒有盤點的商品留空即可。',reason:'差異原因',postAdj:'調整入賬',
+errReason:'請填寫差異原因。',errCount:'實盤數量必須是整數。',noVar:'沒有差異需要入賬。',postedCount:'盤點已入賬，調整的商品：',
+custLede:'每一筆出庫都對應到零售客戶，可以隨時查到誰在什麼時候拿了什麼。',
+contact:'聯繫人',phone:'電話',orders:'訂單數',lastOrder:'最近一次',totals:'按商品彙總',history:'出庫記錄',
+noOrders:'暫無出庫記錄。',addCustomer:'新增客戶',custName:'客戶名稱',saveCust:'保存客戶',
+errCustName:'請填寫客戶名稱。',custSaved:'客戶已添加，出庫時可以直接選擇。',
+ledgerLede:'所有進出記錄都會保留，不能修改或刪除；更正一律以「調整」入賬。',
+all:'全部',T_IN:'入庫',T_OUT:'出庫',T_ADJ:'調整',T_OPEN:'期初',
+copyCsv:'複製為 CSV',copied:'已複製，可以粘貼到 Excel 或 Google 表格。',copyFail:'這裡無法自動複製，請手動選中下方文字複製。',
+none:'暫無記錄。',
+demo:'僅為演示：數據保存在當前瀏覽器裡。正式版本會使用共享數據庫並連接標籤打印機，所有員工看到的是同一套數字。',
+reset:'重置示例數據',resetQ:'這會清除你輸入的所有內容，恢復示例數據。',resetYes:'重置',cancel:'取消',resetDone:'已恢復示例數據。'}
+};
+const ZHT_NAMES={"RYO-HL550": "呂 防脫洗髮水 550ml ×12/箱", "KER-PS600": "可瑞絲 香水洗髮水 600ml ×12/箱", "MIS-PS680": "魅尚萱 完美精華洗髮水 680ml ×12/箱", "TSB-PR490": "絲蓓綺 修護洗髮水 490ml ×12/箱", "HDL-GL170": "肌研 極潤化妝水 170ml ×24/箱", "SNK-PW120": "洗顏專科 潔面乳 120g ×48/箱", "BIO-UV50": "碧柔 水感防曬 50g ×48/箱", "CSX-SE100": "COSRX 蝸牛精華 100ml ×24/箱", "LNG-LS20": "蘭芝 唇膜 20g ×24/箱"};
+
+let L='en';
+try{const s=localStorage.getItem(KEY+'-lang');if(s&&I18N[s])L=s;}catch(e){}
+const t=k=>{const a=I18N[L]&&I18N[L][k];if(a!==undefined)return a;if(L==='zht'&&I18N.zh[k]!==undefined)return I18N.zh[k];return I18N.en[k]!==undefined?I18N.en[k]:k;};
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $=id=>document.getElementById(id);
+function ean13(base){let s=0;for(let i=0;i<12;i++)s+=(+base[i])*(i%2?3:1);return base+((10-s%10)%10);}
+
+function seed(){
+  const now=Date.now();
+  const SH={inci:'Water/Aqua, Sodium Laureth Sulfate, Cocamidopropyl Betaine, Glycerin, Sodium Chloride, Fragrance/Parfum, Citric Acid, Sodium Benzoate',
+    dirEn:'Apply to wet hair, massage into the scalp and lather. Rinse well.',dirFr:'Appliquer sur cheveux mouillés, masser le cuir chevelu et faire mousser. Bien rincer.',
+    warnEn:'For external use only. Avoid contact with eyes. If contact occurs, rinse well with water.',warnFr:"Usage externe seulement. Éviter le contact avec les yeux. En cas de contact, bien rincer à l'eau.",size:'3 × 4 in'};
+  const SK={dirEn:'Apply to clean skin morning and night.',dirFr:'Appliquer sur une peau propre matin et soir.',
+    warnEn:'For external use only. Stop use if irritation occurs.',warnFr:"Usage externe seulement. Cesser l'utilisation en cas d'irritation.",size:'2 × 3 in'};
+  const P=(sku,en,zh,cat,loc,min,upc,base,flag,label)=>({sku,name:{en,zh},cat,unit:'case',loc,min,upc,ean:ean13(base),flag,label});
+  const products=[
+    P('RYO-HL550','Ryo Hair Loss Care Shampoo 550 ml, case of 12','吕 防脱洗发水 550ml ×12/箱','shampoo','A-01',10,12,'880123400101','claim',
+      Object.assign({},SH,{nameEn:'Ryo Hair Loss Care Shampoo',nameFr:'Shampooing soin antichute Ryo',netQty:'550 mL',allergens:'Limonene, Linalool',origin:'KR'})),
+    P('KER-PS600','Kerasys Perfume Shampoo 600 ml, case of 12','可瑞丝 香水洗发水 600ml ×12/箱','shampoo','A-02',12,12,'880123400202','',
+      Object.assign({},SH,{nameEn:'Kerasys Perfume Shampoo',nameFr:'Shampooing parfumé Kerasys',netQty:'600 mL',allergens:'Citronellol, Geraniol',origin:'KR'})),
+    P('MIS-PS680','Mise en scène Perfect Serum Shampoo 680 ml, case of 12','魅尚萱 完美精华洗发水 680ml ×12/箱','shampoo','A-03',8,12,'880123400303','',
+      Object.assign({},SH,{nameEn:'Mise en scène Perfect Serum Shampoo',nameFr:'Shampooing sérum parfait Mise en scène',netQty:'680 mL',allergens:'',origin:'KR'})),
+    P('TSB-PR490','Tsubaki Premium Repair Shampoo 490 ml, case of 12','丝蓓绮 修护洗发水 490ml ×12/箱','shampoo','A-05',10,12,'490123400404','',
+      Object.assign({},SH,{nameEn:'Tsubaki Premium Repair Shampoo',nameFr:'Shampooing réparateur premium Tsubaki',netQty:'490 mL',allergens:'Linalool',origin:'JP'})),
+    P('HDL-GL170','Hada Labo Gokujyun Lotion 170 ml, case of 24','肌研 极润化妆水 170ml ×24/箱','skin','B-01',6,24,'490123400505','',
+      Object.assign({},SK,{nameEn:'Hada Labo Gokujyun Hydrating Lotion',nameFr:'Lotion hydratante Hada Labo Gokujyun',netQty:'170 mL',inci:'Water/Aqua, Butylene Glycol, Glycerin, Sodium Hyaluronate, Methylparaben',allergens:'None (fragrance-free) / Aucun (sans parfum)',origin:'JP'})),
+    P('SNK-PW120','Senka Perfect Whip Cleanser 120 g, case of 48','洗颜专科 洁面乳 120g ×48/箱','skin','B-02',6,48,'490123400606','',
+      Object.assign({},SK,{nameEn:'Senka Perfect Whip Facial Cleanser',nameFr:'Nettoyant visage mousse Senka',netQty:'120 g',inci:'Water/Aqua, Stearic Acid, Myristic Acid, Glycerin, Potassium Hydroxide, Lauric Acid, Fragrance/Parfum',dirEn:'Work into a lather with water, massage onto the face and rinse.',dirFr:"Faire mousser avec de l'eau, masser sur le visage et rincer.",warnEn:'For external use only. Avoid contact with eyes.',warnFr:'Usage externe seulement. Éviter le contact avec les yeux.',allergens:'Linalool',origin:'JP'})),
+    P('BIO-UV50','Bioré UV Aqua Rich Sunscreen 50 g, case of 48','碧柔 水感防晒 50g ×48/箱','sun','B-04',8,48,'490123400707','drug',
+      Object.assign({},SK,{nameEn:'Bioré UV Aqua Rich Sunscreen SPF 50',nameFr:'Écran solaire Bioré UV Aqua Rich FPS 50',netQty:'50 g',inci:'Water/Aqua, Alcohol, Ethylhexyl Methoxycinnamate, Zinc Oxide, Glycerin',allergens:'Limonene',origin:'JP'})),
+    P('CSX-SE100','COSRX Snail 96 Essence 100 ml, case of 24','COSRX 蜗牛精华 100ml ×24/箱','skin','C-01',5,24,'880123400808','',
+      Object.assign({},SK,{nameEn:'COSRX Snail Mucin 96 Essence',nameFr:"Essence à la mucine d'escargot 96 COSRX",netQty:'100 mL',inci:'Snail Secretion Filtrate, Betaine, Butylene Glycol, 1,2-Hexanediol, Sodium Hyaluronate',allergens:'None (fragrance-free) / Aucun (sans parfum)',origin:'KR'})),
+    P('LNG-LS20','Laneige Lip Sleeping Mask 20 g, case of 24','兰芝 唇膜 20g ×24/箱','lip','C-02',5,24,'880123400909','',
+      Object.assign({},SK,{nameEn:'Laneige Lip Sleeping Mask',nameFr:'Masque de nuit pour les lèvres Laneige',netQty:'20 g',inci:'Diisostearyl Malate, Hydrogenated Polyisobutene, Microcrystalline Wax, Fragrance/Parfum',dirEn:'Apply a generous layer to lips before bed.',dirFr:'',allergens:'Limonene',origin:'KR'}))
+  ];
+  const partners=[
+    {id:'S1',type:'supplier',name:'Seoul Beauty Export Co. (sample)',contact:'Export desk',phone:'604-555-0100'},
+    {id:'S2',type:'supplier',name:'Osaka Cosmetics Trading (sample)',contact:'Order desk',phone:'604-555-0133'},
+    {id:'C1',type:'customer',name:'T&T Supermarket (sample)',contact:'Health & beauty buyer',phone:'604-555-0161'},
+    {id:'C2',type:'customer',name:'Loblaws (sample)',contact:'Vendor relations',phone:'604-555-0172'},
+    {id:'C3',type:'customer',name:'Shoppers Drug Mart (sample)',contact:'Beauty category buyer',phone:'604-555-0184'},
+    {id:'C4',type:'customer',name:'PriceSmart Foods (sample)',contact:'Receiving dock',phone:'604-555-0195'},
+    {id:'C5',type:'customer',name:'Walmart Canada (sample)',contact:'DC receiving',phone:'604-555-0148'}
+  ];
+  const opening={'RYO-HL550':40,'KER-PS600':36,'MIS-PS680':20,'TSB-PR490':24,'HDL-GL170':15,'SNK-PW120':10,'BIO-UV50':9,'CSX-SE100':14,'LNG-LS20':7};
+  const ago=(d,h)=>now-d*DAY-h*36e5;
+  const X=(id,d,h,type,ref,partner,lines,note)=>({id,ts:ago(d,h),type,ref,partner,by:'Raymond',lines:lines.map(([sku,qty])=>({sku,qty})),note:note||''});
+  const txns=[
+    X(1,14,0,'OPEN','OPENING','',Object.entries(opening)),
+    X(2,6,3,'IN','KR-SHP-2611','S1',[['RYO-HL550',20],['KER-PS600',12],['MIS-PS680',6]]),
+    X(3,5,2,'OUT','PO-TNT-58213','C1',[['RYO-HL550',10],['KER-PS600',8],['CSX-SE100',4]]),
+    X(4,4,5,'ADJ','COUNT-1104','',[['SNK-PW120',-1]],'Crushed carton / 外箱压坏'),
+    X(5,3,4,'OUT','PO-SDM-77104','C3',[['HDL-GL170',6],['BIO-UV50',4],['LNG-LS20',3]]),
+    X(6,2,6,'IN','JP-SHP-0418','S2',[['TSB-PR490',12],['HDL-GL170',8]]),
+    X(7,2,2,'OUT','PO-LCL-445190','C2',[['MIS-PS680',6],['SNK-PW120',4]]),
+    X(8,1,1,'OUT','PO-PSF-30562','C4',[['TSB-PR490',8],['KER-PS600',10]]),
+    X(9,0,3,'OUT','PO-WMT-904417','C5',[['RYO-HL550',12],['BIO-UV50',2]]),
+    X(10,0,1.5,'IN','KR-SHP-2612','S1',[['CSX-SE100',10],['LNG-LS20',12]]),
+    X(11,0,0.5,'IN','JP-SHP-0419','S2',[['BIO-UV50',6]])
+  ];
+  const J=(id,sku,lot,ref,cases,d,h,printed,done,dh)=>({id,sku,lot,ref,cases,ts:ago(d,h),printed,done,doneTs:done?ago(d,h-dh):null,doneBy:done?'Raymond':''});
+  const jobs=[
+    J(51,'RYO-HL550','K2611-A','KR-SHP-2611',20,6,3,true,true,5),
+    J(52,'KER-PS600','K2611-B','KR-SHP-2611',12,6,3,true,true,6),
+    J(53,'MIS-PS680','K2611-C','KR-SHP-2611',6,6,3,true,true,7),
+    J(54,'TSB-PR490','J0418-A','JP-SHP-0418',12,2,6,true,true,4),
+    J(55,'HDL-GL170','J0418-B','JP-SHP-0418',8,2,6,true,false,0),
+    J(56,'CSX-SE100','K2612-A','KR-SHP-2612',10,0,1.5,false,false,0),
+    J(57,'LNG-LS20','K2612-B','KR-SHP-2612',12,0,1.5,false,false,0),
+    J(58,'BIO-UV50','J0419-A','JP-SHP-0419',6,0,0.5,false,false,0)
+  ];
+  return {products,partners,txns,jobs,zones:{A:180,B:90,C:60},nextId:200,staff:'Raymond',importer:'Company name (sample) · Unit, street address, Richmond, BC'};
+}
+
+let S;
+try{const raw=localStorage.getItem(KEY);S=raw?JSON.parse(raw):seed();}catch(e){S=seed();}
+if(!S||!Array.isArray(S.txns)||!Array.isArray(S.jobs)||!S.zones)S=seed();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+
+const blankDrafts=()=>({
+  receive:{partner:'',ref:'',lines:[],note:'',reviewing:false,err:''},
+  ship:{partner:'',ref:'',lines:[],note:'',reviewing:false,err:''},
+  count:{counts:{},reason:'',err:''},
+  q:'',cust:'',ledgerType:'ALL',confirmReset:false,csv:'',job:'',scanP:'',scanS:'',lblSku:'',period:14
+});
+let D=blankDrafts();
+let tab='stock';
+try{const h=location.hash.slice(1);if(TABS.includes(h))tab=h;}catch(e){}
+
+const prod=sku=>S.products.find(p=>p.sku===sku);
+const pname=p=>{if(!p)return '';if(L==='zht')return ZHT_NAMES[p.sku]||p.name.zh;return p.name[L]||p.name.en;};
+const partnerName=id=>{const p=S.partners.find(x=>x.id===id);return p?p.name:'';};
+function stock(){
+  const st={};S.products.forEach(p=>st[p.sku]=0);
+  S.txns.forEach(x=>x.lines.forEach(l=>{const s=x.type==='OUT'?-1:1;st[l.sku]=(st[l.sku]||0)+s*l.qty;}));
+  return st;
+}
+function pending(){const m={};S.jobs.forEach(j=>{if(!j.done)m[j.sku]=(m[j.sku]||0)+j.cases;});return m;}
+function avail(){const st=stock(),pd=pending(),a={};S.products.forEach(p=>a[p.sku]=(st[p.sku]||0)-(pd[p.sku]||0));return a;}
+const level=(p,q)=>q<=0?'out':(q<p.min?'low':'ok');
+const locale=()=>L==='zh'?'zh-CN':(L==='zht'?'zh-TW':'en-CA');
+const fmtTime=ts=>new Date(ts).toLocaleString(locale(),{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+const fmtDay=ts=>new Date(ts).toLocaleDateString(locale(),{month:'numeric',day:'numeric'});
+const isPosInt=v=>/^\d+$/.test(String(v).trim())&&parseInt(v,10)>0;
+const lineSummary=x=>x.lines.map(l=>{const n=x.type==='OUT'?-l.qty:l.qty;return `${l.sku} ${x.type==='ADJ'&&n>0?'+':''}${n<0?'−':''}${Math.abs(n)}`;}).join(', ');
+const jobUnits=j=>j.cases*((prod(j.sku)||{}).upc||1);
+const jobStickers=j=>{const u=jobUnits(j);return u+Math.max(2,Math.ceil(u*0.02));};
+const stickerCode=j=>('LBL-'+j.sku+'-'+j.lot).toUpperCase();
+const originText=o=>o==='JP'?'Made in Japan / Fabriqué au Japon':(o==='KR'?'Made in Korea / Fabriqué en Corée':'');
+
+function toast(msg){const el=$('toast');el.textContent=msg;el.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>{el.hidden=true;},2800);}
+
+/* ---------- EAN-13 barcode ---------- */
+const EAN_L=['0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'];
+const EAN_R=EAN_L.map(s=>s.replace(/./g,c=>c==='0'?'1':'0'));
+const EAN_G=EAN_R.map(s=>s.split('').reverse().join(''));
+const PARITY=['LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG','LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL'];
+function eanSvg(code){
+  if(!/^\d{13}$/.test(code))return '';
+  const d=code.split('').map(Number),par=PARITY[d[0]];
+  let bits='101';for(let i=1;i<=6;i++)bits+=(par[i-1]==='L'?EAN_L:EAN_G)[d[i]];
+  bits+='01010';for(let i=7;i<=12;i++)bits+=EAN_R[d[i]];bits+='101';
+  const m=1.4,h=34,pad=9,w=bits.length*m+pad*2,guard=new Set([0,1,2,45,46,47,48,49,92,93,94]);
+  let r='';for(let i=0;i<bits.length;i++)if(bits[i]==='1')r+=`<rect x="${(pad+i*m).toFixed(1)}" y="0" width="${m}" height="${guard.has(i)?h+5:h}"/>`;
+  return `<svg viewBox="0 0 ${w} ${h+16}" width="${w}" height="${h+16}" role="img" aria-label="EAN ${code}"><g fill="#111">${r}</g><g fill="#111" font-family="IBM Plex Mono,monospace" font-size="9"><text x="1" y="${h+13}">${code[0]}</text><text x="${pad+3*m+21*m}" y="${h+13}" text-anchor="middle">${code.slice(1,7)}</text><text x="${pad+50*m+21*m}" y="${h+13}" text-anchor="middle">${code.slice(7)}</text></g></svg>`;
+}
+
+/* ---------- label compliance ---------- */
+function reqChecks(p){
+  const l=p.label||{},has=v=>String(v||'').trim()!=='';
+  return [
+    {k:'r_identity',ok:has(l.nameEn)&&has(l.nameFr)},
+    {k:'r_net',ok:/\d/.test(l.netQty||'')&&/(m?l|g|kg|L)\b/i.test(l.netQty||'')},
+    {k:'r_importer',ok:has(S.importer)},
+    {k:'r_inci',ok:has(l.inci)},
+    {k:'r_dir',ok:has(l.dirEn)&&has(l.dirFr)},
+    {k:'r_warn',ok:has(l.warnEn)&&has(l.warnFr)},
+    {k:'r_allergens',ok:has(l.allergens)},
+    {k:'r_origin',ok:has(l.origin)},
+    {k:'r_ean',ok:/^\d{13}$/.test(p.ean||'')}
+  ];
+}
+function reqHtml(p){
+  const c=reqChecks(p),n=c.filter(x=>x.ok).length;
+  return `<div class="req"><div class="head" style="font-weight:600">${esc(t('reqTitle'))} <span class="count ${n===c.length?'good':'bad'}">${n}/${c.length}</span></div>
+  <ul>${c.map(x=>`<li>${x.ok?'<span class="good">✓</span>':'<span class="bad">✕</span>'} ${esc(t(x.k))}</li>`).join('')}</ul></div>`;
+}
+function flagBanner(p){
+  if(p.flag==='drug')return `<div class="banner drug">${esc(t('flagDrug'))}</div>`;
+  if(p.flag==='claim')return `<div class="banner claim">${esc(t('flagClaim'))}</div>`;
+  return '';
+}
+function stickerHtml(p,lot){
+  const l=p.label||{},miss='<span class="missing">—</span>',v=s=>String(s||'').trim()?esc(s):miss;
+  const code=('LBL-'+p.sku+'-'+lot).toUpperCase();
+  return `<div class="sticker" aria-label="Sticker preview">
+    <div class="nm">${v(l.nameEn)}</div><div class="nmfr">${v(l.nameFr)}</div>
+    <div class="net">${v(l.netQty)}</div>
+    <div class="rule"></div>
+    <div class="two"><div><b>Directions:</b> ${v(l.dirEn)}</div><div><b>Mode d’emploi :</b> ${v(l.dirFr)}</div></div>
+    <div class="two" style="margin-top:4px"><div><b>Warnings:</b> ${v(l.warnEn)}</div><div><b>Mises en garde :</b> ${v(l.warnFr)}</div></div>
+    <div class="rule"></div>
+    <div><b>Ingredients / Ingrédients :</b> ${v(l.inci)}</div>
+    <div style="margin-top:3px"><b>Allergens / Allergènes :</b> ${v(l.allergens)}</div>
+    <div class="rule"></div>
+    <div><b>Imported by / Importé par :</b> ${v(S.importer)}</div>
+    <div>${l.origin?esc(originText(l.origin)):miss}</div>
+    <div class="foot"><div>${eanSvg(p.ean)}</div><div class="code">LOT ${esc(lot)}<br>${esc(code)}</div></div>
+  </div><div class="sizecap">${esc(l.size||'')}</div>`;
+}
+
+/* ---------- stock in / out validation ---------- */
+function issues(k){
+  const d=D[k],out=[],av=avail();
+  if(!String(S.staff||'').trim())out.push(t('errNoStaff'));
+  if(!d.partner)out.push(t(k==='receive'?'errPartnerIn':'errPartnerOut'));
+  if(!d.ref.trim())out.push(t('errRef'));
+  if(!d.lines.length){out.push(t('errNoLines'));return out;}
+  if(k==='receive'){
+    if(d.lines.some(l=>!isPosInt(l.qty)))out.push(t('errQty'));
+  }else{
+    if(d.lines.some(l=>!isPosInt(l.ordered)))out.push(t('errQty'));
+    const short=d.lines.filter(l=>isPosInt(l.ordered)&&parseInt(l.ordered,10)>(av[l.sku]||0)).map(l=>l.sku);
+    if(short.length)out.push(t('errAvail')+short.join(', '));
+    const mis=d.lines.filter(l=>isPosInt(l.ordered)&&String(l.picked).trim()!==String(parseInt(l.ordered,10))).map(l=>l.sku);
+    if(mis.length)out.push(t('errPick')+mis.join(', '));
+  }
+  return out;
+}
+function checkHtml(k){
+  const iss=issues(k);
+  if(!iss.length)return `<div class="check"><span class="good">✓ ${esc(t('ready'))}</span></div>`;
+  return `<div class="check"><div class="head">${esc(t('checkHead'))}</div><ul>${iss.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`;
+}
+function updateCheck(k){
+  const box=$(k+'-check');if(box)box.innerHTML=checkHtml(k);
+  const b=document.querySelector(`[data-act="review"][data-k="${k}"]`);if(b)b.disabled=issues(k).length>0;
+}
+function shipStatus(l,av){
+  if(!isPosInt(l.ordered))return `<span class="muted">—</span>`;
+  const o=parseInt(l.ordered,10);
+  if(o>av)return `<span class="bad">${esc(t('stShort'))}${o-av}</span>`;
+  if(String(l.picked).trim()==='')return `<span class="muted">${esc(t('stPick'))}</span>`;
+  if(String(l.picked).trim()!==String(o))return `<span class="bad">✕ ${esc(t('stMismatch'))}</span>`;
+  return `<span class="good">✓ ${esc(t('stMatch'))}</span>`;
+}
+
+/* ---------- charts ---------- */
+const CATS=[['shampoo','--s1'],['skin','--s2'],['sun','--s3'],['lip','--s4']];
+const ZONES=[['A','--s1'],['B','--s2'],['C','--s3']];
+const SLOTS=['--s1','--s2','--s3','--s4','--s5'];
+function arc(cx,cy,R,r,a0,a1){
+  const p=(rad,a)=>`${(cx+rad*Math.cos(a)).toFixed(2)} ${(cy+rad*Math.sin(a)).toFixed(2)}`;
+  const large=a1-a0>Math.PI?1:0;
+  return `M${p(R,a0)} A${R} ${R} 0 ${large} 1 ${p(R,a1)} L${p(r,a1)} A${r} ${r} 0 ${large} 0 ${p(r,a0)} Z`;
+}
+function pieChart(title,rows){
+  const live=rows.filter(r=>r.value>0),total=live.reduce((a,b)=>a+b.value,0);
+  if(!total)return `<div class="empty">${esc(t('noData'))}</div>`;
+  const cx=100,cy=100,R=92,r=56;let a0=-Math.PI/2,paths='';
+  live.forEach(row=>{
+    const frac=row.value/total,pct=Math.round(frac*1000)/10,tip=`${row.label}: ${row.value} ${t('casesUnit')} · ${pct}%`;
+    if(frac>0.9999){const m=a0+Math.PI;paths+=`<path d="${arc(cx,cy,R,r,a0,m)}" fill="var(${row.color})" stroke="var(--surface)" stroke-width="2" data-tip="${esc(tip)}"/><path d="${arc(cx,cy,R,r,m,a0+2*Math.PI)}" fill="var(${row.color})" stroke="var(--surface)" stroke-width="2" data-tip="${esc(tip)}"/>`;}
+    else{const a1=a0+frac*2*Math.PI;paths+=`<path d="${arc(cx,cy,R,r,a0,a1)}" fill="var(${row.color})" stroke="var(--surface)" stroke-width="2" data-tip="${esc(tip)}"/>`;a0=a1;}
+  });
+  const label=`${title}: `+live.map(x=>`${x.label} ${x.value}`).join(', ');
+  return `<div class="pie"><svg viewBox="0 0 200 200" width="190" height="190" role="img" aria-label="${esc(label)}">${paths}
+    <text x="100" y="99" text-anchor="middle" class="c-total">${total}</text><text x="100" y="118" text-anchor="middle" class="c-unit">${esc(t('casesUnit'))}</text></svg>
+    <ul class="legend">${live.map(x=>`<li><span class="sw" style="background:var(${x.color})"></span><span class="lg">${esc(x.label)}</span><span class="v">${x.value}</span><span class="p">${Math.round(x.value/total*100)}%</span></li>`).join('')}</ul></div>`;
+}
+function sortRows(rows){const tail=rows.filter(r=>r.tail),head=rows.filter(r=>!r.tail).sort((a,b)=>b.value-a.value);return head.concat(tail);}
+function periodStart(){const d=new Date();d.setHours(0,0,0,0);return d.getTime()-(D.period-1)*DAY;}
+function byCategory(type,t0){
+  const sum={};CATS.forEach(([c])=>sum[c]=0);
+  S.txns.filter(x=>x.type===type&&x.ts>=t0).forEach(x=>x.lines.forEach(l=>{const p=prod(l.sku);if(p&&sum[p.cat]!==undefined)sum[p.cat]+=l.qty;}));
+  return sortRows(CATS.map(([c,col])=>({label:t('cat_'+c),value:sum[c],color:col})));
+}
+function byCustomer(t0){
+  const custs=S.partners.filter(p=>p.type==='customer'),sum={};let other=0;
+  S.txns.filter(x=>x.type==='OUT'&&x.ts>=t0).forEach(x=>{const q=x.lines.reduce((a,l)=>a+l.qty,0);const i=custs.findIndex(c=>c.id===x.partner);if(i>=0&&i<SLOTS.length)sum[x.partner]=(sum[x.partner]||0)+q;else other+=q;});
+  const rows=custs.slice(0,SLOTS.length).map((c,i)=>({label:c.name.replace(' (sample)',''),value:sum[c.id]||0,color:SLOTS[i]}));
+  rows.push({label:t('other'),value:other,color:'--s-other',tail:true});
+  return sortRows(rows);
+}
+function zoneUse(){
+  const st=stock(),used={A:0,B:0,C:0};
+  S.products.forEach(p=>{const z=(p.loc||'')[0];if(used[z]!==undefined)used[z]+=Math.max(0,st[p.sku]||0);});
+  return used;
+}
+function capacityRows(){
+  const used=zoneUse(),cap=S.zones,totalCap=Object.values(cap).reduce((a,b)=>a+b,0),totalUsed=Object.values(used).reduce((a,b)=>a+b,0);
+  const rows=ZONES.map(([z,col])=>({label:t('zone_'+z),value:used[z],color:col}));
+  rows.push({label:t('free'),value:Math.max(0,totalCap-totalUsed),color:'--s-free',tail:true});
+  return rows;
+}
+function dailyBars(t0){
+  const n=D.period,days=[];for(let i=0;i<n;i++)days.push({ts:t0+i*DAY,in:0,out:0});
+  S.txns.forEach(x=>{if(x.ts<t0||(x.type!=='IN'&&x.type!=='OUT'))return;const i=Math.floor((x.ts-t0)/DAY);if(i<0||i>=n)return;const q=x.lines.reduce((a,l)=>a+l.qty,0);days[i][x.type==='IN'?'in':'out']+=q;});
+  const mx=Math.max(1,...days.map(d=>Math.max(d.in,d.out)));
+  const step=mx<=10?2:mx<=25?5:mx<=60?10:mx<=150?25:50,top=Math.ceil(mx/step)*step;
+  const W=640,H=230,pl=34,pr=8,pt=10,pb=26,pw=W-pl-pr,ph=H-pt-pb,gw=pw/n,bw=Math.max(3,Math.min(14,gw*0.32));
+  const y=v=>pt+ph-v/top*ph;let g='';
+  for(let v=0;v<=top;v+=step)g+=`<line class="gridl" x1="${pl}" x2="${W-pr}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/><text class="axis" x="${pl-6}" y="${(y(v)+3.5).toFixed(1)}" text-anchor="end">${v}</text>`;
+  const every=n<=7?1:n<=14?2:5;let bars='';
+  days.forEach((d,i)=>{
+    const cx=pl+gw*i+gw/2,lbl=fmtDay(d.ts);
+    [['in','--s1',cx-bw-1],['out','--s2',cx+1]].forEach(([k,col,x])=>{const v=d[k];if(!v)return;const h=Math.max(1.5,v/top*ph);
+      bars+=`<rect x="${x.toFixed(1)}" y="${(pt+ph-h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="var(${col})" data-tip="${esc(lbl+' · '+t(k==='in'?'legendIn':'legendOut')+': '+v+' '+t('casesUnit'))}"/>`;});
+    if(i%every===0||i===n-1)bars+=`<text class="axis" x="${cx.toFixed(1)}" y="${H-8}" text-anchor="middle">${esc(lbl)}</text>`;
+  });
+  return `<div class="blegend"><span><i style="background:var(--s1)"></i>${esc(t('legendIn'))}</span><span><i style="background:var(--s2)"></i>${esc(t('legendOut'))}</span></div>
+  <div class="tablewrap" style="margin-top:0"><svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:520px;height:auto;display:block" role="img" aria-label="${esc(t('chDaily'))}">${g}<line x1="${pl}" x2="${W-pr}" y1="${pt+ph}" y2="${pt+ph}" stroke="var(--muted)" stroke-width="1"/>${bars}</svg></div>`;
+}
+function vReports(){
+  const t0=periodStart(),inRows=byCategory('IN',t0),outRows=byCategory('OUT',t0),custRows=byCustomer(t0);
+  const inSum=inRows.reduce((a,b)=>a+b.value,0),outSum=outRows.reduce((a,b)=>a+b.value,0);
+  const top=custRows.filter(r=>!r.tail&&r.value>0)[0];
+  const used=zoneUse(),totalCap=Object.values(S.zones).reduce((a,b)=>a+b,0),totalUsed=Object.values(used).reduce((a,b)=>a+b,0),pctUsed=Math.round(totalUsed/totalCap*100);
+  return `<section class="panel"><h2>${esc(t('tab_reports'))}</h2><p class="lede">${esc(t('reportsLede'))}</p>
+    <div class="chips" role="group" aria-label="${esc(t('period'))}">${[7,14,30].map(n=>`<button type="button" data-act="period" data-n="${n}" aria-pressed="${D.period===n}">${esc(t('d'+n))}</button>`).join('')}</div></section>
+  <div class="kpis">
+    <div class="kpi"><b>${inSum}</b><span>${esc(t('kIn'))}</span></div>
+    <div class="kpi"><b>${outSum}</b><span>${esc(t('kOut'))}</span></div>
+    <div class="kpi"><b class="txt">${top?esc(top.label):'—'}</b><span>${esc(t('kTop'))}${top?` · ${top.value} ${esc(t('casesUnit'))}`:''}</span></div>
+    <div class="kpi ${pctUsed>=85?'attn':''}"><b>${pctUsed}%</b><span>${esc(t('kSpace'))} · ${totalUsed}/${totalCap}</span></div></div>
+  <div class="charts">
+    <section class="panel chart"><h3>${esc(t('chIn'))}</h3><p class="csub">${esc(t('chInSub'))}</p>${pieChart(t('chIn'),inRows)}</section>
+    <section class="panel chart"><h3>${esc(t('chOut'))}</h3><p class="csub">${esc(t('chOutSub'))}</p>${pieChart(t('chOut'),outRows)}</section>
+    <section class="panel chart"><h3>${esc(t('chCust'))}</h3><p class="csub">${esc(t('chCustSub'))}</p>${pieChart(t('chCust'),custRows)}</section>
+    <section class="panel chart"><h3>${esc(t('chSpace'))}</h3><p class="csub">${esc(t('chSpaceSub'))}</p>${pieChart(t('chSpace'),capacityRows())}
+      <div class="tablewrap" style="margin-top:14px"><table><thead><tr><th>${esc(t('zone'))}</th><th class="num">${esc(t('used'))}</th><th class="num">${esc(t('capacity'))}</th><th>${esc(t('fill'))}</th></tr></thead><tbody>
+      ${ZONES.map(([z,col])=>{const u=used[z],c=S.zones[z],pc=Math.round(u/c*100);return `<tr><td>${esc(t('zone_'+z))}</td><td class="num mono">${u}</td><td class="num mono">${c}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="meter" style="flex:1"><i style="width:${Math.min(100,pc)}%;background:var(${col})"></i></div><span class="mono" style="min-width:3em;text-align:right">${pc}%</span></div></td></tr>`;}).join('')}
+      </tbody></table></div></section>
+  </div>
+  <section class="panel chart"><h3>${esc(t('chDaily'))}</h3><p class="csub">${esc(t('chDailySub'))}</p>${dailyBars(t0)}</section>
+  <p class="note">${esc(t('pieNote'))}</p>`;
+}
+
+/* ---------- views ---------- */
+function stockRows(){
+  const st=stock(),pd=pending(),av=avail(),q=D.q.trim().toLowerCase(),rank={out:0,low:1,ok:2};
+  const rows=S.products.filter(p=>!q||p.sku.toLowerCase().includes(q)||p.name.en.toLowerCase().includes(q)||p.name.zh.includes(q)||(ZHT_NAMES[p.sku]||'').includes(q))
+    .sort((a,b)=>rank[level(a,av[a.sku])]-rank[level(b,av[b.sku])]||a.sku.localeCompare(b.sku));
+  if(!rows.length)return `<tr><td colspan="8" class="muted">${esc(t('none'))}</td></tr>`;
+  return rows.map(p=>{const lv=level(p,av[p.sku]);return `<tr><td class="mono">${esc(p.sku)}</td><td>${esc(pname(p))}</td><td class="mono">${esc(p.loc)}</td><td class="num mono">${st[p.sku]}</td><td class="num mono ${pd[p.sku]?'':'muted'}">${pd[p.sku]||0}</td><td class="num mono"><b>${av[p.sku]}</b></td><td class="num mono muted">${p.min}</td><td><span class="pill ${lv}">${esc(t('st_'+lv))}</span></td></tr>`;}).join('');
+}
+function vStock(){
+  const av=avail(),pd=pending(),d0=new Date();d0.setHours(0,0,0,0);const t0=d0.getTime();
+  const low=S.products.filter(p=>av[p.sku]<p.min).length;
+  const awaiting=Object.values(pd).reduce((a,b)=>a+b,0);
+  const outN=S.txns.filter(x=>x.type==='OUT'&&x.ts>=t0).length;
+  return `<div class="kpis">
+    <div class="kpi"><b>${S.products.length}</b><span>${esc(t('kpiProducts'))}</span></div>
+    <div class="kpi ${low?'attn':''}"><b>${low}</b><span>${esc(t('kpiLow'))}</span></div>
+    <div class="kpi ${awaiting?'attn':''}"><b>${awaiting}</b><span>${esc(t('kpiAwait'))}</span></div>
+    <div class="kpi"><b>${outN}</b><span>${esc(t('kpiOut'))}</span></div></div>
+  <section class="panel"><h2>${esc(t('tab_stock'))}</h2><p class="lede">${esc(t('stockLede'))}</p>
+    <div class="field" style="max-width:360px"><label for="q">${esc(t('search'))}</label><input id="q" type="search" value="${esc(D.q)}" autocomplete="off"></div>
+    <div class="tablewrap"><table><thead><tr><th>${esc(t('sku'))}</th><th>${esc(t('item'))}</th><th>${esc(t('loc'))}</th><th class="num">${esc(t('onhand'))}</th><th class="num">${esc(t('awaiting'))}</th><th class="num">${esc(t('available'))}</th><th class="num">${esc(t('min'))}</th><th>${esc(t('status'))}</th></tr></thead>
+    <tbody id="stock-rows">${stockRows()}</tbody></table></div></section>`;
+}
+function partnerSelect(k){
+  const type=k==='receive'?'supplier':'customer',d=D[k];
+  return `<select id="${k}-partner" data-bind="${k}.partner"><option value="">${esc(t('choose'))}</option>${S.partners.filter(p=>p.type===type).map(p=>`<option value="${esc(p.id)}" ${d.partner===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>`;
+}
+function scanBox(k){
+  const d=D[k];
+  return `<div class="field" style="margin-top:14px"><label for="scan-${k}">${esc(t('scanLabel'))}</label>
+  <div class="scan"><input id="scan-${k}" list="skulist" autocomplete="off" placeholder="RYO-HL550" data-scan="${k}"><button class="btn" type="button" data-act="scan" data-k="${k}">${esc(t('add'))}</button></div>
+  ${d.err?`<p class="err">${esc(d.err)}</p>`:''}</div>`;
+}
+function linesTable(k){
+  const d=D[k],st=stock(),av=avail();
+  if(!d.lines.length)return `<p class="muted" style="margin:12px 0 0">${esc(t('emptyLines'))}</p>`;
+  if(k==='receive'){
+    return `<div class="tablewrap"><table><thead><tr><th>${esc(t('sku'))}</th><th>${esc(t('item'))}</th><th class="num">${esc(t('onhand'))}</th><th class="num">${esc(t('cases'))}</th><th>${esc(t('lot'))}</th><th class="num">${esc(t('after'))}</th><th></th></tr></thead><tbody>
+    ${d.lines.map((l,i)=>{const oh=st[l.sku]||0;return `<tr><td class="mono">${esc(l.sku)}</td><td>${esc(pname(prod(l.sku)))}</td><td class="num mono">${oh}</td>
+      <td class="num"><input class="qty" id="receive-qty-${i}" inputmode="numeric" aria-label="${esc(t('cases'))} ${esc(l.sku)}" data-k="receive" data-i="${i}" data-f="qty" value="${esc(l.qty)}"></td>
+      <td><input class="lotin" id="receive-lot-${i}" aria-label="${esc(t('lot'))} ${esc(l.sku)}" placeholder="${esc(t('lotPh'))}" data-k="receive" data-i="${i}" data-f="lot" value="${esc(l.lot||'')}"></td>
+      <td class="num mono" id="receive-after-${i}">${isPosInt(l.qty)?oh+parseInt(l.qty,10):'—'}</td>
+      <td class="num"><button class="btn small" type="button" data-act="remove" data-k="receive" data-i="${i}">${esc(t('remove'))}</button></td></tr>`;}).join('')}</tbody></table></div>`;
+  }
+  return `<div class="tablewrap"><table><thead><tr><th>${esc(t('sku'))}</th><th>${esc(t('item'))}</th><th class="num">${esc(t('available'))}</th><th class="num">${esc(t('ordered'))}</th><th class="num">${esc(t('picked'))}</th><th>${esc(t('check'))}</th><th></th></tr></thead><tbody>
+  ${d.lines.map((l,i)=>{const a=av[l.sku]||0;return `<tr><td class="mono">${esc(l.sku)}</td><td>${esc(pname(prod(l.sku)))}</td><td class="num mono">${a}</td>
+    <td class="num"><input class="qty" id="ship-ord-${i}" inputmode="numeric" aria-label="${esc(t('ordered'))} ${esc(l.sku)}" data-k="ship" data-i="${i}" data-f="ordered" value="${esc(l.ordered)}"></td>
+    <td class="num"><input class="qty" id="ship-pick-${i}" inputmode="numeric" aria-label="${esc(t('picked'))} ${esc(l.sku)}" data-k="ship" data-i="${i}" data-f="picked" value="${esc(l.picked)}"></td>
+    <td id="ship-st-${i}">${shipStatus(l,a)}</td>
+    <td class="num"><button class="btn small" type="button" data-act="remove" data-k="ship" data-i="${i}">${esc(t('remove'))}</button></td></tr>`;}).join('')}</tbody></table></div>`;
+}
+function vEntry(k){
+  const d=D[k];
+  if(d.reviewing)return vReview(k);
+  return `<section class="panel"><h2>${esc(t('tab_'+k))}</h2><p class="lede">${esc(t(k==='receive'?'inLede':'outLede'))}</p>
+  <div class="grid2">
+    <div class="field"><label for="${k}-partner">${esc(t(k==='receive'?'supplier':'customer'))}</label>${partnerSelect(k)}</div>
+    <div class="field"><label for="${k}-ref">${esc(t(k==='receive'?'refIn':'refOut'))}</label><input id="${k}-ref" data-bind="${k}.ref" value="${esc(d.ref)}" placeholder="${k==='receive'?'KR-SHP-2613':'PO-TNT-58240'}" autocomplete="off"></div>
+  </div>
+  ${scanBox(k)}
+  ${linesTable(k)}
+  <div class="field" style="margin-top:14px"><label for="${k}-note">${esc(t('note'))}</label><input id="${k}-note" data-bind="${k}.note" value="${esc(d.note)}" autocomplete="off"></div>
+  <div id="${k}-check">${checkHtml(k)}</div>
+  <div class="actions"><button class="btn primary" type="button" data-act="review" data-k="${k}" ${issues(k).length?'disabled':''}>${esc(t('review'))}</button></div>
+  </section>`;
+}
+function vReview(k){
+  const d=D[k],base=k==='receive'?stock():avail(),sign=k==='receive'?1:-1;
+  return `<section class="panel review"><h2>${esc(t('reviewTitle'))}</h2><p class="lede">${esc(t(k==='receive'?'reviewIn':'reviewOut'))}</p>
+  <dl class="sum"><dt>${esc(t(k==='receive'?'supplier':'customer'))}</dt><dd>${esc(partnerName(d.partner))}</dd>
+  <dt>${esc(t('ref'))}</dt><dd class="mono">${esc(d.ref)}</dd><dt>${esc(t('by'))}</dt><dd>${esc(S.staff)}</dd>
+  <dt>${esc(t('when'))}</dt><dd>${esc(fmtTime(Date.now()))}</dd>${d.note?`<dt>${esc(t('note'))}</dt><dd>${esc(d.note)}</dd>`:''}</dl>
+  <div class="tablewrap"><table><thead><tr><th>${esc(t('sku'))}</th><th>${esc(t('item'))}</th>${k==='receive'?`<th>${esc(t('lot'))}</th>`:''}<th class="num">${esc(t('qty'))}</th><th class="num">${esc(t(k==='receive'?'onhand':'available'))}</th><th class="num">${esc(t('after'))}</th></tr></thead><tbody>
+  ${d.lines.map((l,i)=>{const q=parseInt(k==='receive'?l.qty:l.ordered,10),b=base[l.sku]||0;return `<tr><td class="mono">${esc(l.sku)}</td><td>${esc(pname(prod(l.sku)))}</td>${k==='receive'?`<td class="mono">${esc((l.lot||'').trim()||d.ref.trim()+'-'+(i+1))}</td>`:''}<td class="num mono">${sign>0?'+':'−'}${q}</td><td class="num mono">${b}</td><td class="num mono">${b+sign*q}</td></tr>`;}).join('')}
+  </tbody></table></div>
+  <div class="actions"><button class="btn" type="button" data-act="back" data-k="${k}">${esc(t('back'))}</button><button class="btn primary" type="button" data-act="post" data-k="${k}">${esc(t('post'))}</button></div></section>`;
+}
+
+/* ---------- labels view ---------- */
+function jobStatus(j){
+  const p=prod(j.sku);
+  if(p&&p.flag==='drug')return `<span class="pill out">${esc(t('jb_hold'))}</span>`;
+  return j.printed?`<span class="pill ADJ">${esc(t('jb_apply'))}</span>`:`<span class="pill low">${esc(t('jb_print'))}</span>`;
+}
+function scanResult(j){
+  const p=prod(j.sku),sp=D.scanP.trim(),ss=D.scanS.trim().toUpperCase(),res=[];
+  let okP=false,okS=false;
+  if(sp){
+    if(sp===p.ean){okP=true;res.push(`<li><span class="good">✓</span> ${esc(t('pOk'))}</li>`);}
+    else{const o=S.products.find(x=>x.ean===sp);res.push(`<li><span class="bad">✕ ${esc(o?t('pWrong')+o.sku:t('pUnknown'))}</span></li>`);}
+  }
+  if(ss){
+    if(ss===stickerCode(j)){okS=true;res.push(`<li><span class="good">✓</span> ${esc(t('sOk'))}</li>`);}
+    else{const o=S.jobs.find(x=>stickerCode(x)===ss);res.push(`<li><span class="bad">✕ ${esc(o?t('sWrong')+o.sku+' / '+o.lot:t('sUnknown'))}</span></li>`);}
+  }
+  return {okP,okS,html:res.join('')};
+}
+function releaseIssues(j,sr){
+  const p=prod(j.sku),out=[];
+  if(!String(S.staff||'').trim())out.push(t('errNoStaff'));
+  if(p.flag==='drug')out.push(t('needDrug'));
+  if(reqChecks(p).some(c=>!c.ok))out.push(t('needData'));
+  if(!j.printed)out.push(t('needPrint'));
+  if(!sr.okP)out.push(t('needScanP'));
+  if(!sr.okS)out.push(t('needScanS'));
+  return out;
+}
+function relDyn(j){
+  const sr=scanResult(j),iss=releaseIssues(j,sr);
+  return `${sr.html?`<ul style="list-style:none;padding:0;margin:10px 0 0;display:grid;gap:4px">${sr.html}</ul>`:''}
+  ${iss.length?`<div class="check"><div class="head">${esc(t('checkHead'))}</div><ul>${iss.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`:`<div class="check"><span class="good">✓ ${esc(t('canRelease'))}</span></div>`}
+  <div class="actions"><button class="btn" type="button" data-act="closeJob">${esc(t('close'))}</button><button class="btn primary" type="button" data-act="release" ${iss.length?'disabled':''}>${esc(t('confirmRelease'))}</button></div>`;
+}
+function vRelease(j){
+  const p=prod(j.sku);
+  return `<section class="panel review"><h2>${esc(t('release'))}</h2>
+  ${flagBanner(p)}
+  <dl class="sum"><dt>${esc(t('jobFor'))}</dt><dd class="mono">${esc(j.sku)} · ${esc(t('lot'))} ${esc(j.lot)}</dd>
+  <dt>${esc(t('item'))}</dt><dd>${esc(pname(p))}</dd><dt>${esc(t('ref'))}</dt><dd class="mono">${esc(j.ref)}</dd>
+  <dt>${esc(t('units'))}</dt><dd class="mono">${j.cases} × ${p.upc} ${esc(t('unitsPerCase'))} = ${jobUnits(j)}</dd>
+  <dt>${esc(t('toPrint'))}</dt><dd><span class="mono">${jobStickers(j)}</span> <span class="muted">(${esc(t('spare'))})</span></dd>
+  <dt>${esc(t('status'))}</dt><dd>${jobStatus(j)}</dd></dl>
+  ${j.printed?'':`<div class="actions"><button class="btn" type="button" data-act="markPrinted">${esc(t('markPrinted'))}</button></div><p class="muted" style="font-size:13px;margin:6px 0 0">${esc(t('printedNote'))}</p>`}
+  <div class="grid2" style="margin-top:14px">
+    <div class="field"><label for="scan-p">${esc(t('scanProduct'))}</label><input id="scan-p" class="mono" inputmode="numeric" autocomplete="off" value="${esc(D.scanP)}" placeholder="${esc(p.ean)}"></div>
+    <div class="field"><label for="scan-s">${esc(t('scanSticker'))}</label><input id="scan-s" class="mono" autocomplete="off" value="${esc(D.scanS)}" placeholder="${esc(stickerCode(j))}"></div>
+  </div>
+  <div class="actions" style="margin-top:8px"><button class="btn small" type="button" data-act="fillScan">${esc(t('fillScan'))}</button></div>
+  <div id="rel-dyn">${relDyn(j)}</div></section>`;
+}
+function labelEditor(p){
+  const l=p.label||{};
+  const inp=(f,ph)=>`<div class="field"><label for="lbl-${f}">${esc(t('f_'+f))}</label><input id="lbl-${f}" data-lbl="${f}" value="${esc(l[f]||'')}" placeholder="${esc(ph||'')}" autocomplete="off"></div>`;
+  const ta=f=>`<div class="field"><label for="lbl-${f}">${esc(t('f_'+f))}</label><textarea id="lbl-${f}" data-lbl="${f}">${esc(l[f]||'')}</textarea></div>`;
+  return `<div class="field" style="margin-top:16px"><label for="importer">${esc(t('importer'))}</label><input id="importer" value="${esc(S.importer)}" autocomplete="off"><span class="muted" style="font-size:12.5px">${esc(t('importerHint'))}</span></div>
+  <div class="grid2" style="margin-top:12px">${inp('nameEn')}${inp('nameFr')}${inp('netQty','550 mL')}
+    <div class="field"><label for="lbl-origin">${esc(t('f_origin'))}</label><select id="lbl-origin" data-lbl="origin"><option value="">${esc(t('choose'))}</option><option value="KR" ${l.origin==='KR'?'selected':''}>Korea / Corée</option><option value="JP" ${l.origin==='JP'?'selected':''}>Japan / Japon</option></select></div>
+    <div class="field"><label for="lbl-size">${esc(t('f_size'))}</label><select id="lbl-size" data-lbl="size">${['2 × 3 in','3 × 4 in','4 × 6 in'].map(s=>`<option ${l.size===s?'selected':''}>${s}</option>`).join('')}</select></div>
+    ${inp('allergens')}</div>
+  <div class="grid2" style="margin-top:12px">${ta('dirEn')}${ta('dirFr')}${ta('warnEn')}${ta('warnFr')}</div>
+  <div style="margin-top:12px">${ta('inci')}</div>`;
+}
+function vLabels(){
+  const open=S.jobs.filter(j=>!j.done).sort((a,b)=>b.ts-a.ts);
+  const done=S.jobs.filter(j=>j.done).sort((a,b)=>b.doneTs-a.doneTs).slice(0,5);
+  const job=S.jobs.find(j=>String(j.id)===String(D.job)&&!j.done);
+  if(!D.lblSku)D.lblSku=job?job.sku:(open[0]?open[0].sku:S.products[0].sku);
+  const p=prod(D.lblSku)||S.products[0];
+  const lot=job&&job.sku===p.sku?job.lot:'SAMPLE';
+  return `<section class="panel"><h2>${esc(t('queue'))}</h2><p class="lede">${esc(t('labelsLede'))}</p>
+  ${open.length?`<div class="tablewrap"><table><thead><tr><th>${esc(t('time'))}</th><th>${esc(t('ref'))}</th><th>${esc(t('sku'))}</th><th>${esc(t('item'))}</th><th>${esc(t('lot'))}</th><th class="num">${esc(t('cases'))}</th><th class="num">${esc(t('toPrint'))}</th><th>${esc(t('status'))}</th><th></th></tr></thead><tbody>
+  ${open.map(j=>`<tr class="${job&&job.id===j.id?'sel':''}"><td class="muted" style="white-space:nowrap">${esc(fmtTime(j.ts))}</td><td class="mono">${esc(j.ref)}</td><td class="mono">${esc(j.sku)}</td><td>${esc(pname(prod(j.sku)))}</td><td class="mono">${esc(j.lot)}</td><td class="num mono">${j.cases}</td><td class="num mono">${jobStickers(j)}</td><td>${jobStatus(j)}</td><td class="num"><button class="btn small" type="button" data-act="openJob" data-id="${j.id}">${esc(t('open'))}</button></td></tr>`).join('')}
+  </tbody></table></div>`:`<p class="muted">${esc(t('queueEmpty'))}</p>`}
+  ${done.length?`<h3>${esc(t('recent'))}</h3><div class="tablewrap"><table><thead><tr><th>${esc(t('time'))}</th><th>${esc(t('sku'))}</th><th>${esc(t('lot'))}</th><th class="num">${esc(t('cases'))}</th><th>${esc(t('by'))}</th></tr></thead><tbody>
+  ${done.map(j=>`<tr><td class="muted" style="white-space:nowrap">${esc(fmtTime(j.doneTs))}</td><td class="mono">${esc(j.sku)}</td><td class="mono">${esc(j.lot)}</td><td class="num mono">${j.cases}</td><td>${esc(j.doneBy)}</td></tr>`).join('')}</tbody></table></div>`:''}
+  </section>
+  ${job?vRelease(job):''}
+  <section class="panel"><h2>${esc(t('workspace'))}</h2>
+  <div class="field" style="max-width:420px;margin-top:8px"><label for="lbl-sku">${esc(t('previewFor'))}</label><select id="lbl-sku">${S.products.map(x=>`<option value="${esc(x.sku)}" ${x.sku===p.sku?'selected':''}>${esc(x.sku)} · ${esc(pname(x))}</option>`).join('')}</select></div>
+  <div class="ws"><div id="sticker-box">${stickerHtml(p,lot)}</div>
+    <div><div id="flag-box">${flagBanner(p)}</div><div id="req-box">${reqHtml(p)}</div><p class="note" style="margin-top:14px">${esc(t('labelDisclaimer'))}</p></div></div>
+  ${labelEditor(p)}
+  </section>`;
+}
+function refreshLabelBits(){
+  const p=prod(D.lblSku);if(!p)return;
+  const job=S.jobs.find(j=>String(j.id)===String(D.job)&&!j.done);
+  const lot=job&&job.sku===p.sku?job.lot:'SAMPLE';
+  const sb=$('sticker-box');if(sb)sb.innerHTML=stickerHtml(p,lot);
+  const rb=$('req-box');if(rb)rb.innerHTML=reqHtml(p);
+  const rd=$('rel-dyn');if(rd&&job)rd.innerHTML=relDyn(job);
+}
+
+/* ---------- other views ---------- */
+function vCount(){
+  const st=stock(),c=D.count;
+  return `<section class="panel"><h2>${esc(t('tab_count'))}</h2><p class="lede">${esc(t('countLede'))} ${esc(t('countHint'))}</p>
+  <div class="tablewrap"><table><thead><tr><th>${esc(t('sku'))}</th><th>${esc(t('item'))}</th><th>${esc(t('loc'))}</th><th class="num">${esc(t('system'))}</th><th class="num">${esc(t('counted'))}</th><th class="num">${esc(t('variance'))}</th></tr></thead><tbody>
+  ${S.products.map(p=>{const v=c.counts[p.sku]??'';return `<tr><td class="mono">${esc(p.sku)}</td><td>${esc(pname(p))}</td><td class="mono">${esc(p.loc)}</td><td class="num mono">${st[p.sku]}</td>
+    <td class="num"><input class="qty" id="count-${esc(p.sku)}" inputmode="numeric" aria-label="${esc(t('counted'))} ${esc(p.sku)}" data-count="${esc(p.sku)}" value="${esc(v)}"></td>
+    <td class="num mono" id="var-${esc(p.sku)}">${varHtml(p.sku,st)}</td></tr>`;}).join('')}
+  </tbody></table></div>
+  <div class="field" style="margin-top:14px;max-width:520px"><label for="count-reason">${esc(t('reason'))}</label><input id="count-reason" value="${esc(c.reason)}" autocomplete="off"></div>
+  ${c.err?`<p class="err">${esc(c.err)}</p>`:''}
+  <div class="actions"><button class="btn primary" type="button" data-act="postCount">${esc(t('postAdj'))}</button></div></section>`;
+}
+function varHtml(sku,st){
+  const v=D.count.counts[sku];
+  if(v===undefined||String(v).trim()==='')return '<span class="muted">—</span>';
+  if(!/^\d+$/.test(String(v).trim()))return '<span class="bad">?</span>';
+  const diff=parseInt(v,10)-(st[sku]||0);
+  if(diff===0)return '<span class="good">0</span>';
+  return `<span class="${diff>0?'vpos':'vneg'}">${diff>0?'+':'−'}${Math.abs(diff)}</span>`;
+}
+function vCustomers(){
+  const custs=S.partners.filter(p=>p.type==='customer');
+  if(!D.cust&&custs.length)D.cust=custs[0].id;
+  const c=custs.find(x=>x.id===D.cust);
+  let detail='';
+  if(c){
+    const ships=S.txns.filter(x=>x.type==='OUT'&&x.partner===c.id).sort((a,b)=>b.ts-a.ts);
+    const totals={};ships.forEach(x=>x.lines.forEach(l=>totals[l.sku]=(totals[l.sku]||0)+l.qty));
+    detail=`<h3>${esc(c.name)}</h3>
+    <dl class="sum"><dt>${esc(t('contact'))}</dt><dd>${esc(c.contact||'—')}</dd><dt>${esc(t('phone'))}</dt><dd class="mono">${esc(c.phone||'—')}</dd>
+    <dt>${esc(t('orders'))}</dt><dd class="mono">${ships.length}</dd><dt>${esc(t('lastOrder'))}</dt><dd>${ships.length?esc(fmtTime(ships[0].ts)):'—'}</dd></dl>
+    ${ships.length?`<h3>${esc(t('totals'))}</h3><div class="tablewrap"><table><thead><tr><th>${esc(t('sku'))}</th><th>${esc(t('item'))}</th><th class="num">${esc(t('cases'))}</th></tr></thead><tbody>
+      ${Object.entries(totals).sort((a,b)=>b[1]-a[1]).map(([sku,q])=>`<tr><td class="mono">${esc(sku)}</td><td>${esc(pname(prod(sku)))}</td><td class="num mono">${q}</td></tr>`).join('')}</tbody></table></div>
+      <h3>${esc(t('history'))}</h3><div class="tablewrap"><table><thead><tr><th>${esc(t('time'))}</th><th>${esc(t('ref'))}</th><th>${esc(t('items'))}</th><th>${esc(t('by'))}</th></tr></thead><tbody>
+      ${ships.map(x=>`<tr><td class="muted">${esc(fmtTime(x.ts))}</td><td class="mono">${esc(x.ref)}</td><td class="mono">${esc(lineSummary(x))}</td><td>${esc(x.by)}</td></tr>`).join('')}</tbody></table></div>`
+      :`<p class="muted">${esc(t('noOrders'))}</p>`}`;
+  }
+  return `<section class="panel"><h2>${esc(t('tab_customers'))}</h2><p class="lede">${esc(t('custLede'))}</p>
+  <div class="chips">${custs.map(x=>`<button type="button" data-act="pickCust" data-id="${esc(x.id)}" aria-pressed="${x.id===D.cust}">${esc(x.name)}</button>`).join('')}</div>
+  ${detail}</section>
+  <section class="panel"><h2>${esc(t('addCustomer'))}</h2>
+  <div class="grid2" style="margin-top:10px">
+    <div class="field"><label for="nc-name">${esc(t('custName'))}</label><input id="nc-name" autocomplete="off"></div>
+    <div class="field"><label for="nc-contact">${esc(t('contact'))}</label><input id="nc-contact" autocomplete="off"></div>
+    <div class="field"><label for="nc-phone">${esc(t('phone'))}</label><input id="nc-phone" inputmode="tel" autocomplete="off"></div>
+  </div>
+  <p class="err" id="nc-err" hidden></p>
+  <div class="actions"><button class="btn primary" type="button" data-act="saveCust">${esc(t('saveCust'))}</button></div></section>`;
+}
+function vLedger(){
+  const types=['ALL','IN','OUT','ADJ','OPEN'];
+  const rows=S.txns.filter(x=>D.ledgerType==='ALL'||x.type===D.ledgerType).sort((a,b)=>b.ts-a.ts);
+  return `<section class="panel"><h2>${esc(t('tab_ledger'))}</h2><p class="lede">${esc(t('ledgerLede'))}</p>
+  <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center">
+    <div class="chips">${types.map(ty=>`<button type="button" data-act="ledgerType" data-ty="${ty}" aria-pressed="${D.ledgerType===ty}">${esc(ty==='ALL'?t('all'):t('T_'+ty))}</button>`).join('')}</div>
+    <button class="btn" type="button" data-act="copyCsv">${esc(t('copyCsv'))}</button></div>
+  ${D.csv?`<p class="muted" style="margin:12px 0 4px">${esc(t('copyFail'))}</p><textarea id="csv-out" class="csv" readonly aria-label="CSV">${esc(D.csv)}</textarea>`:''}
+  <div class="tablewrap"><table><thead><tr><th>${esc(t('time'))}</th><th>${esc(t('type'))}</th><th>${esc(t('ref'))}</th><th>${esc(t('partner'))}</th><th>${esc(t('items'))}</th><th>${esc(t('by'))}</th></tr></thead><tbody>
+  ${rows.length?rows.map(x=>`<tr><td class="muted" style="white-space:nowrap">${esc(fmtTime(x.ts))}</td><td><span class="pill ${x.type}">${esc(t('T_'+x.type))}</span></td><td class="mono">${esc(x.ref)}</td><td>${esc(partnerName(x.partner)||x.note||'—')}</td><td class="mono">${esc(lineSummary(x))}</td><td>${esc(x.by)}</td></tr>`).join(''):`<tr><td colspan="6" class="muted">${esc(t('none'))}</td></tr>`}
+  </tbody></table></div></section>`;
+}
+function csvText(){
+  const q=v=>`"${String(v).replace(/"/g,'""')}"`;
+  const rows=[['time','type','reference','customer_or_supplier','recorded_by','sku','item','qty_change_cases','note']];
+  [...S.txns].sort((a,b)=>a.ts-b.ts).forEach(x=>x.lines.forEach(l=>{const p=prod(l.sku);rows.push([new Date(x.ts).toISOString(),x.type,x.ref,partnerName(x.partner),x.by,l.sku,p?p.name.en:'',(x.type==='OUT'?-1:1)*l.qty,x.note]);}));
+  return rows.map(r=>r.map(q).join(',')).join('\n');
+}
+
+/* ---------- render ---------- */
+function render(){
+  document.documentElement.lang=L==='zh'?'zh-Hans':(L==='zht'?'zh-Hant':'en');
+  $('t-sample').textContent=t('sample');$('t-sub').textContent=t('sub');$('t-rec').textContent=t('rec');$('t-demo').textContent=t('demo');
+  const staff=$('staff');if(document.activeElement!==staff)staff.value=S.staff||'';
+  ['en','zh','zht'].forEach(k=>$('lang-'+k).setAttribute('aria-pressed',L===k));
+  const openJobs=S.jobs.filter(j=>!j.done).length;
+  $('tabs').innerHTML=TABS.map(k=>`<button type="button" role="tab" aria-selected="${tab===k}" data-act="tab" data-tab="${k}">${esc(t('tab_'+k))}${k==='labels'&&openJobs?`<span class="badge">${openJobs}</span>`:''}</button>`).join('');
+  $('skulist').innerHTML=S.products.map(p=>`<option value="${esc(p.sku)}">${esc(pname(p))}</option>`).join('');
+  const v={stock:vStock,reports:vReports,receive:()=>vEntry('receive'),labels:vLabels,ship:()=>vEntry('ship'),count:vCount,customers:vCustomers,ledger:vLedger}[tab];
+  $('view').innerHTML=v();
+  $('tip').hidden=true;
+  $('reset-area').innerHTML=D.confirmReset
+    ?`<div class="confirm"><span>${esc(t('resetQ'))}</span><button class="btn danger" type="button" data-act="resetYes">${esc(t('resetYes'))}</button><button class="btn" type="button" data-act="resetNo">${esc(t('cancel'))}</button></div>`
+    :`<div><button class="btn small" type="button" data-act="reset">${esc(t('reset'))}</button></div>`;
+}
+
+function doScan(k){
+  const inp=$('scan-'+k);if(!inp)return;
+  const code=inp.value.trim().toUpperCase();if(!code)return;
+  const p=prod(code),d=D[k];
+  if(!p){d.err=t('errUnknownSku')+code;render();const n=$('scan-'+k);if(n){n.value=code;n.focus();n.select();}return;}
+  d.err='';
+  const ln=d.lines.find(l=>l.sku===p.sku);
+  if(k==='receive'){if(ln)ln.qty=String((parseInt(ln.qty,10)||0)+1);else d.lines.push({sku:p.sku,qty:'1',lot:''});}
+  else{if(ln)ln.ordered=String((parseInt(ln.ordered,10)||0)+1);else d.lines.push({sku:p.sku,ordered:'1',picked:''});}
+  render();const n=$('scan-'+k);if(n)n.focus();
+}
+function post(k){
+  if(issues(k).length){D[k].reviewing=false;render();return;}
+  const d=D[k],ts=Date.now(),ref=d.ref.trim();
+  S.txns.push({id:S.nextId++,ts,type:k==='receive'?'IN':'OUT',ref,partner:d.partner,by:String(S.staff).trim(),
+    lines:d.lines.map(l=>({sku:l.sku,qty:parseInt(k==='receive'?l.qty:l.ordered,10)})),note:d.note.trim()});
+  if(k==='receive'){
+    d.lines.forEach((l,i)=>S.jobs.push({id:S.nextId++,sku:l.sku,lot:(l.lot||'').trim()||ref+'-'+(i+1),ref,cases:parseInt(l.qty,10),ts,printed:false,done:false,doneTs:null,doneBy:''}));
+  }
+  save();
+  D[k]={partner:'',ref:'',lines:[],note:'',reviewing:false,err:''};
+  toast(t(k==='receive'?'postedIn':'postedOut'));render();
+}
+function postCount(){
+  const st=stock(),c=D.count,lines=[];
+  for(const [sku,v] of Object.entries(c.counts)){
+    if(String(v).trim()==='')continue;
+    if(!/^\d+$/.test(String(v).trim())){c.err=t('errCount');render();return;}
+    const diff=parseInt(v,10)-(st[sku]||0);if(diff!==0)lines.push({sku,qty:diff});
+  }
+  if(!String(S.staff||'').trim()){c.err=t('errNoStaff');render();return;}
+  if(!lines.length){c.err='';toast(t('noVar'));render();return;}
+  if(!c.reason.trim()){c.err=t('errReason');render();return;}
+  const d=new Date();const ref='COUNT-'+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+  S.txns.push({id:S.nextId++,ts:Date.now(),type:'ADJ',ref,partner:'',by:String(S.staff).trim(),lines,note:c.reason.trim()});
+  save();D.count={counts:{},reason:'',err:''};
+  toast(t('postedCount')+lines.map(l=>l.sku).join(', '));render();
+}
+
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act],[data-lang]');if(!el)return;
+  if(el.dataset.lang){L=el.dataset.lang;try{localStorage.setItem(KEY+'-lang',L);}catch(err){}render();return;}
+  const a=el.dataset.act,k=el.dataset.k;
+  const job=S.jobs.find(j=>String(j.id)===String(D.job)&&!j.done);
+  if(a==='tab'){tab=el.dataset.tab;try{history.replaceState(null,'','#'+tab);}catch(err){}render();window.scrollTo({top:0});}
+  else if(a==='period'){D.period=+el.dataset.n;render();}
+  else if(a==='scan')doScan(k);
+  else if(a==='remove'){D[k].lines.splice(+el.dataset.i,1);render();}
+  else if(a==='review'){if(!issues(k).length){D[k].reviewing=true;render();window.scrollTo({top:0});}}
+  else if(a==='back'){D[k].reviewing=false;render();}
+  else if(a==='post')post(k);
+  else if(a==='postCount')postCount();
+  else if(a==='openJob'){const j=S.jobs.find(x=>String(x.id)===el.dataset.id);if(j){D.job=j.id;D.lblSku=j.sku;D.scanP='';D.scanS='';render();const r=document.querySelector('.panel.review');if(r)r.scrollIntoView({block:'start'});}}
+  else if(a==='closeJob'){D.job='';D.scanP='';D.scanS='';render();}
+  else if(a==='markPrinted'&&job){job.printed=true;save();render();}
+  else if(a==='fillScan'&&job){D.scanP=prod(job.sku).ean;D.scanS=stickerCode(job);render();}
+  else if(a==='release'&&job){
+    const sr=scanResult(job);if(releaseIssues(job,sr).length){render();return;}
+    job.done=true;job.doneTs=Date.now();job.doneBy=String(S.staff).trim();save();
+    D.job='';D.scanP='';D.scanS='';toast(t('released'));render();
+  }
+  else if(a==='pickCust'){D.cust=el.dataset.id;render();}
+  else if(a==='saveCust'){
+    const name=$('nc-name').value.trim(),errEl=$('nc-err');
+    if(!name){errEl.textContent=t('errCustName');errEl.hidden=false;$('nc-name').focus();return;}
+    const id='C'+(S.nextId++);
+    S.partners.push({id,type:'customer',name,contact:$('nc-contact').value.trim(),phone:$('nc-phone').value.trim()});
+    save();D.cust=id;toast(t('custSaved'));render();
+  }
+  else if(a==='ledgerType'){D.ledgerType=el.dataset.ty;render();}
+  else if(a==='copyCsv'){
+    const csv=csvText();
+    const fail=()=>{D.csv=csv;render();const ta=$('csv-out');if(ta){ta.focus();ta.select();}};
+    try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(csv).then(()=>{D.csv='';toast(t('copied'));render();}).catch(fail);}else fail();}catch(err){fail();}
+  }
+  else if(a==='reset'){D.confirmReset=true;render();}
+  else if(a==='resetNo'){D.confirmReset=false;render();}
+  else if(a==='resetYes'){S=seed();save();D=blankDrafts();toast(t('resetDone'));render();}
+});
+function onInput(e){
+  const el=e.target;
+  if(el.id==='staff'){S.staff=el.value;save();if(tab==='receive'||tab==='ship')updateCheck(tab);if(tab==='labels')refreshLabelBits();return;}
+  if(el.id==='q'){D.q=el.value;$('stock-rows').innerHTML=stockRows();return;}
+  if(el.id==='count-reason'){D.count.reason=el.value;return;}
+  if(el.id==='lbl-sku'){D.lblSku=el.value;render();return;}
+  if(el.id==='importer'){S.importer=el.value;save();refreshLabelBits();return;}
+  if(el.id==='scan-p'||el.id==='scan-s'){if(el.id==='scan-p')D.scanP=el.value;else D.scanS=el.value;const job=S.jobs.find(j=>String(j.id)===String(D.job)&&!j.done);const rd=$('rel-dyn');if(rd&&job)rd.innerHTML=relDyn(job);return;}
+  if(el.dataset.lbl){const p=prod(D.lblSku);if(!p)return;p.label[el.dataset.lbl]=el.value;save();refreshLabelBits();return;}
+  if(el.dataset.bind){const [k,f]=el.dataset.bind.split('.');D[k][f]=el.value;updateCheck(k);return;}
+  if(el.dataset.count){D.count.counts[el.dataset.count]=el.value;const c=$('var-'+el.dataset.count);if(c)c.innerHTML=varHtml(el.dataset.count,stock());return;}
+  if(el.dataset.f){
+    const k=el.dataset.k,i=+el.dataset.i,line=D[k].lines[i];if(!line)return;
+    line[el.dataset.f]=el.value;
+    if(k==='receive'){const oh=stock()[line.sku]||0;const c=$('receive-after-'+i);if(c)c.textContent=isPosInt(line.qty)?oh+parseInt(line.qty,10):'—';}
+    else{const c=$('ship-st-'+i);if(c)c.innerHTML=shipStatus(line,avail()[line.sku]||0);}
+    updateCheck(k);
+  }
+}
+document.addEventListener('input',onInput);
+document.addEventListener('change',e=>{if(e.target.tagName==='SELECT')onInput(e);});
+document.addEventListener('keydown',e=>{
+  const el=e.target;
+  if(e.key==='Enter'&&el.dataset&&el.dataset.scan){e.preventDefault();doScan(el.dataset.scan);}
+});
+/* chart tooltip */
+document.addEventListener('pointermove',e=>{
+  const tip=$('tip'),el=e.target.closest&&e.target.closest('[data-tip]');
+  if(!el){if(!tip.hidden)tip.hidden=true;return;}
+  tip.textContent=el.getAttribute('data-tip');tip.hidden=false;
+  const w=tip.offsetWidth,h=tip.offsetHeight;
+  let x=e.clientX+14,y=e.clientY+14;
+  if(x+w>window.innerWidth-8)x=e.clientX-w-14;
+  if(y+h>window.innerHeight-8)y=e.clientY-h-14;
+  tip.style.left=Math.max(8,x)+'px';tip.style.top=Math.max(8,y)+'px';
+});
+document.addEventListener('pointerleave',()=>{$('tip').hidden=true;});
+render();
+</script>
+
+</body>
+</html>
