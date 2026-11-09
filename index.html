@@ -159,6 +159,25 @@ dl.sum dd{margin:0;font-weight:500;min-width:0;}
 footer .wrap{display:grid;gap:10px;padding-block:0 32px;}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:500;max-width:calc(100% - 32px);z-index:20;}
 .confirm{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--bad);border-radius:8px;}
+/* user guide */
+.gsteps{margin:8px 0 0;padding-left:22px;display:grid;gap:8px;max-width:72ch;}
+.gsteps li::marker{font:500 13px var(--mono);color:var(--muted);}
+.gflow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);gap:8px;margin-top:8px;}
+.gflow>div{background:var(--surface-2);border-radius:8px;padding:12px 14px;min-width:0;}
+.gflow strong{display:block;font-weight:600;}
+.gflow span{display:block;color:var(--muted);font-size:14px;line-height:1.4;}
+.gflow .arr{align-self:center;background:none;padding:0;color:var(--muted);font:500 18px/1 var(--mono);}
+@media (max-width:620px){.gflow{grid-template-columns:minmax(0,1fr);}.gflow .arr{justify-self:center;transform:rotate(90deg);}}
+.ggrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+@media (max-width:820px){.ggrid{grid-template-columns:minmax(0,1fr);}}
+.ggrid .panel{display:flex;flex-direction:column;align-items:flex-start;}
+.ggrid h3{margin:0;}
+.ggrid .check{width:100%;box-sizing:border-box;}
+.ggrid .btn{margin-top:14px;}
+.gpages{align-items:baseline;gap:10px 16px;margin-top:10px;}
+.gfaq{margin:0;max-width:72ch;}
+.gfaq dt{font-weight:600;margin-top:16px;}
+.gfaq dd{margin:2px 0 0;}
 @media (max-width:520px){h1{font-size:24px;} .panel{padding:14px;} .sticker .two{grid-template-columns:1fr;}}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important;}}
 </style>
@@ -198,11 +217,11 @@ footer .wrap{display:grid;gap:10px;padding-block:0 32px;}
 <script>
 const KEY='stockroom-ledger-demo-v4';
 const DAY=864e5;
-const TABS=['stock','reports','receive','labels','ship','count','customers','ledger'];
+const TABS=['stock','reports','receive','labels','ship','count','customers','ledger','guide'];
 
 const I18N={
 en:{sample:'Sample data',sub:'Stock in and out for hair care and beauty, tied to retail customers. Demo for review.',rec:'Recording as',
-tab_stock:'Stock on hand',tab_reports:'Reports',tab_receive:'Stock in',tab_labels:'Labels',tab_ship:'Stock out',tab_count:'Stock count',tab_customers:'Customers',tab_ledger:'Ledger',
+tab_stock:'Stock on hand',tab_reports:'Reports',tab_receive:'Stock in',tab_labels:'Labels',tab_ship:'Stock out',tab_count:'Stock count',tab_customers:'Customers',tab_ledger:'Ledger',tab_guide:'User guide',
 kpiProducts:'Products tracked',kpiLow:'Below minimum',kpiAwait:'Cases awaiting stickers',kpiOut:'Shipments today',
 stockLede:'Balances are worked out from every posted movement, so they always add up. Cases still waiting for Canadian stickers are held back, so only labelled stock counts as available.',
 search:'Search SKU or item',sku:'SKU',item:'Item',loc:'Location',onhand:'On hand',awaiting:'Awaiting labels',available:'Available',min:'Min',status:'Status',qty:'Qty',after:'After',
@@ -275,7 +294,7 @@ none:'No records yet.',
 demo:'Demo only: entries are saved in this browser. A real version would use one shared database and a label printer, so every staff member sees the same numbers.',
 reset:'Reset sample data',resetQ:'This clears everything you entered and restores the sample data.',resetYes:'Reset',cancel:'Cancel',resetDone:'Sample data restored.'},
 zh:{/*ZH_BEGIN*/sample:'示例数据',sub:'洗护和美妆产品的进出库记录，对应到零售客户。演示版。',rec:'记录人',
-tab_stock:'当前库存',tab_reports:'统计报表',tab_receive:'入库',tab_labels:'贴标',tab_ship:'出库',tab_count:'盘点',tab_customers:'客户',tab_ledger:'流水记录',
+tab_stock:'当前库存',tab_reports:'统计报表',tab_receive:'入库',tab_labels:'贴标',tab_ship:'出库',tab_count:'盘点',tab_customers:'客户',tab_ledger:'流水记录',tab_guide:'使用文档',
 kpiProducts:'在库商品',kpiLow:'低于安全库存',kpiAwait:'待贴标箱数',kpiOut:'今日出库单',
 stockLede:'库存数量由所有已入账的进出记录自动算出，所以永远对得上。还没贴加拿大标签的货会被暂扣，只有贴好标签的才算「可出库」。',
 search:'搜索货号或品名',sku:'货号',item:'品名',loc:'库位',onhand:'现有库存',awaiting:'待贴标',available:'可出库',min:'安全库存',status:'状态',qty:'数量',after:'入账后',
@@ -347,7 +366,7 @@ none:'暂无记录。',
 demo:'仅为演示：数据保存在当前浏览器里。正式版本会使用共享数据库并连接标签打印机，所有员工看到的是同一套数字。',
 reset:'重置示例数据',resetQ:'这会清除你输入的所有内容，恢复示例数据。',resetYes:'重置',cancel:'取消',resetDone:'已恢复示例数据。'/*ZH_END*/},
 zht:{sample:'示例數據',sub:'洗護和美妝產品的進出庫記錄，對應到零售客戶。演示版。',rec:'記錄人',
-tab_stock:'當前庫存',tab_reports:'統計報表',tab_receive:'入庫',tab_labels:'貼標',tab_ship:'出庫',tab_count:'盤點',tab_customers:'客戶',tab_ledger:'流水記錄',
+tab_stock:'當前庫存',tab_reports:'統計報表',tab_receive:'入庫',tab_labels:'貼標',tab_ship:'出庫',tab_count:'盤點',tab_customers:'客戶',tab_ledger:'流水記錄',tab_guide:'使用文檔',
 kpiProducts:'在庫商品',kpiLow:'低於安全庫存',kpiAwait:'待貼標箱數',kpiOut:'今日出庫單',
 stockLede:'庫存數量由所有已入賬的進出記錄自動算出，所以永遠對得上。還沒貼加拿大標籤的貨會被暫扣，只有貼好標籤的纔算「可出庫」。',
 search:'搜索貨號或品名',sku:'貨號',item:'品名',loc:'庫位',onhand:'現有庫存',awaiting:'待貼標',available:'可出庫',min:'安全庫存',status:'狀態',qty:'數量',after:'入賬後',
@@ -420,6 +439,82 @@ demo:'僅為演示：數據保存在當前瀏覽器裡。正式版本會使用�
 reset:'重置示例數據',resetQ:'這會清除你輸入的所有內容，恢復示例數據。',resetYes:'重置',cancel:'取消',resetDone:'已恢復示例數據。'}
 };
 const ZHT_NAMES={"RYO-HL550": "呂 防脫洗髮水 550ml ×12/箱", "KER-PS600": "可瑞絲 香水洗髮水 600ml ×12/箱", "MIS-PS680": "魅尚萱 完美精華洗髮水 680ml ×12/箱", "TSB-PR490": "絲蓓綺 修護洗髮水 490ml ×12/箱", "HDL-GL170": "肌研 極潤化妝水 170ml ×24/箱", "SNK-PW120": "洗顏專科 潔面乳 120g ×48/箱", "BIO-UV50": "碧柔 水感防曬 50g ×48/箱", "CSX-SE100": "COSRX 蝸牛精華 100ml ×24/箱", "LNG-LS20": "蘭芝 唇膜 20g ×24/箱"};
+
+/* User guide copy. {key} is replaced with that key's I18N text, so names in the guide always match the buttons and fields on screen. */
+const GUIDE={
+en:{lede:'How to use this inventory system. You don’t need to read it all: find the job you’re doing and follow those steps.',
+startTitle:'Before you start',
+start:['Enter your name in {rec} at the top of the page. Nothing can be posted without a name.','All quantities are counted in cases.','To change language, use EN, 简体 or 繁體 at the top.','This is a demo with sample data, so feel free to try things. {reset} at the bottom of the page puts everything back.'],
+flowTitle:'How goods move through',
+flow:[['tab_receive','Goods arrive and are recorded.'],['tab_labels','Canadian stickers are printed and applied.'],['tab_ship','Labelled goods go to the customer.']],
+go:'Go to ',resultLabel:'Good to know: ',
+tasks:[
+{tab:'receive',title:'Goods arrived: record stock in',steps:['Choose the {supplier} and enter the {refIn}.','Scan a SKU, or type it and press Enter. Each scan of the same SKU adds 1 case.','Match {cases} to the packing slip and enter the {lot}. If you leave the lot blank, the system creates one.','Click {review}, check everything once more, then click {post}.'],tip:'The goods now count as stock, but can’t ship until they are labelled. A sticker job appears in {tab_labels} automatically.'},
+{tab:'labels',title:'Apply stickers and release',steps:['Find the batch in the {queue} and click {open}.','Print the stickers, then click {markPrinted}. The demo doesn’t actually print.','Scan a product barcode, then scan a sticker. Both must match this batch. No scanner? Click {fillScan}.','Apply the stickers, then click {confirmRelease}. The batch can now ship.'],tip:'If you’re asked to complete the label data, fill in the missing items under {workspace} on the same page. Every item on the checklist needs a tick.'},
+{tab:'ship',title:'Sending an order: record stock out',steps:['Choose the {customer} and enter the {refOut}.','Scan or type each SKU on the PO, pressing Enter after each one.','Enter the PO quantity in {ordered} and what you really picked in {picked}.','When the line shows {stMatch}, click {review}, check once more, then click {post}.'],tip:'You can’t post if the two numbers differ or there isn’t enough labelled stock. This stops wrong shipments before they leave.'},
+{tab:'count',title:'Checking the shelves: stock count',steps:['Enter what is really on the shelf in {counted}, including cases not yet labelled. Leave a row blank if you didn’t count it.','{variance} shows the difference for each row.','If there are differences, enter the {reason} and click {postAdj}.'],tip:'The difference is saved as an adjustment, so the numbers match the shelf again.'}
+],
+pagesTitle:'The other pages',
+pages:[['stock','See how much of each product you have. Use the search box to find one quickly.'],['reports','Pick 7, 14 or 30 days to see what came in, what went out and how full the warehouse is.'],['customers','Click a customer to see their orders. Add new customers at the bottom of the page.'],['ledger','Every movement, newest first. Filter by type, or click {copyCsv} to paste it into Excel.']],
+faqTitle:'Common questions',
+faq:[
+['What’s the difference between {onhand}, {awaiting} and {available}?','{onhand} is every case in the warehouse. {awaiting} is the cases without stickers yet. {available} is the first minus the second: what you can ship right now.'],
+['What do {st_low} and {st_out} mean?','{st_low}: available stock is under the minimum, so it’s time to reorder. {st_out}: nothing is available to ship.'],
+['Why can’t I click {review}?','Something is still missing. The box just above the button lists what to fix.'],
+['I posted a mistake. How do I fix it?','Posted records can’t be edited or deleted. If you haven’t posted yet, click {back}. If you have, use {tab_count} to enter the correct quantity, and the difference is saved as an adjustment.'],
+['Why can’t the sunscreen be released?','Sunscreens are regulated as drugs in Canada and need a DIN or NPN before sale. In this demo, that product stays on {jb_hold}.'],
+['Where is my data saved?','Only in the browser you’re using now. Other computers and browsers won’t see it, and clearing your browser data erases it.'],
+['How do I start over?','Click {reset} at the bottom of the page, then {resetYes}. Everything you entered is cleared.']
+]},
+zh:{lede:'这里教你怎么用这套库存系统。不用全部看完，要做哪件事，就看哪一段。',
+startTitle:'开始之前',
+start:['在页面顶部的{rec}填上你的名字。不填名字就不能入账。','系统里的数量都按「箱」计算。','要换语言，点页面顶部的 EN、简体或繁體。','这是演示版，里面都是示例数据，可以放心试。点页面最下面的{reset}就能恢复原样。'],
+flowTitle:'货物的路线',
+flow:[['tab_receive','货到了，先登记。'],['tab_labels','打印并贴上加拿大标签。'],['tab_ship','贴好标签的货发给客户。']],
+go:'去',resultLabel:'小提示：',
+tasks:[
+{tab:'receive',title:'货到了：登记入库',steps:['选择{supplier}，填上{refIn}。','扫描货号，或输入货号后按回车。同一个货号每扫一次，增加 1 箱。','对照送货单改好{cases}，填上{lot}。批次号不填的话，系统会自动生成。','点{review}，再看一遍，然后点{post}。'],tip:'货已经算进库存，但贴好标签才能出库。系统会自动在{tab_labels}里生成贴标任务。'},
+{tab:'labels',title:'贴标签并放行',steps:['在{queue}里找到这批货，点{open}。','打印标签后，点{markPrinted}。演示版不会真的打印。','扫描商品条形码，再扫描标签。两个都要和这批货对上。没有扫码枪的话，点{fillScan}。','贴好标签后，点{confirmRelease}。这批货就可以出库了。'],tip:'如果提示要补全标签资料，到同一页下方的{workspace}填上缺的内容。清单每一项都打勾才能放行。'},
+{tab:'ship',title:'要发货：登记出库',steps:['选择{customer}，填上{refOut}。','扫描或输入采购单上的每个货号，每个都按一次回车。','在{ordered}填采购单上的数量，在{picked}填实际拣到的数量。','这一行显示{stMatch}后，点{review}，再看一遍，然后点{post}。'],tip:'两个数字不一样，或者已贴标的库存不够，都不能入账。这是为了在发货前拦住错误。'},
+{tab:'count',title:'查货架：盘点',steps:['在{counted}填货架上实际的箱数，还没贴标的也要算上。没有盘点的行留空。','{variance}会显示每一行差多少。','如果有差异，填上{reason}，然后点{postAdj}。'],tip:'差额会记为一笔「调整」，账面就和货架一致了。'}
+],
+pagesTitle:'其他页面',
+pages:[['stock','查每个商品还有多少。可以用搜索框快速找到。'],['reports','选 7、14 或 30 天，看进了多少、出了多少，以及仓库有多满。'],['customers','点客户名称，看这个客户的订单。页面最下方可以新增客户。'],['ledger','所有进出记录，最新的在最上面。可以按类型筛选，也可以点{copyCsv}后粘贴到 Excel。']],
+faqTitle:'常见问题',
+faq:[
+['{onhand}、{awaiting}和{available}有什么区别？','{onhand}是仓库里的全部箱数。{awaiting}是还没贴好标签的箱数。{available}是前者减去后者，也就是现在能发的箱数。'],
+['{st_low}和{st_out}是什么意思？','{st_low}：可出库数量低于安全库存，该补货了。{st_out}：现在没有货可以发。'],
+['为什么{review}按钮点不了？','还有内容没填好。按钮正上方的方框会列出要补的内容。'],
+['入账后发现录错了，怎么办？','已入账的记录不能修改或删除。还没入账的话，点{back}就能改。已经入账的话，到{tab_count}填上正确的数量，差额会记为一笔「调整」。'],
+['为什么防晒产品放行不了？','在加拿大，防晒产品按药品管理，销售前必须有 DIN 或 NPN。在这个演示里，这个产品会一直显示{jb_hold}。'],
+['我的数据存在哪里？','只存在你现在用的这个浏览器里。换电脑或换浏览器都看不到，清除浏览器数据也会把它删掉。'],
+['怎么清空重来？','点页面最下面的{reset}，再点{resetYes}。你录入的内容都会被清除。']
+]},
+zht:{lede:'這裡教你怎麼用這套庫存系統。不用全部看完，要做哪件事，就看哪一段。',
+startTitle:'開始之前',
+start:['在頁面頂部的{rec}填上你的名字。不填名字就不能入賬。','系統裡的數量都按「箱」計算。','要換語言，點頁面頂部的 EN、简体或繁體。','這是演示版，裡面都是示例數據，可以放心試。點頁面最下面的{reset}就能恢復原樣。'],
+flowTitle:'貨物的路線',
+flow:[['tab_receive','貨到了，先登記。'],['tab_labels','打印並貼上加拿大標籤。'],['tab_ship','貼好標籤的貨發給客戶。']],
+go:'去',resultLabel:'小提示：',
+tasks:[
+{tab:'receive',title:'貨到了：登記入庫',steps:['選擇{supplier}，填上{refIn}。','掃描貨號，或輸入貨號後按回車。同一個貨號每掃一次，增加 1 箱。','對照送貨單改好{cases}，填上{lot}。批次號不填的話，系統會自動生成。','點{review}，再看一遍，然後點{post}。'],tip:'貨已經算進庫存，但貼好標籤才能出庫。系統會自動在{tab_labels}裡生成貼標任務。'},
+{tab:'labels',title:'貼標籤並放行',steps:['在{queue}裡找到這批貨，點{open}。','打印標籤後，點{markPrinted}。演示版不會真的打印。','掃描商品條形碼，再掃描標籤。兩個都要和這批貨對上。沒有掃碼槍的話，點{fillScan}。','貼好標籤後，點{confirmRelease}。這批貨就可以出庫了。'],tip:'如果提示要補全標籤資料，到同一頁下方的{workspace}填上缺的內容。清單每一項都打勾才能放行。'},
+{tab:'ship',title:'要發貨：登記出庫',steps:['選擇{customer}，填上{refOut}。','掃描或輸入採購單上的每個貨號，每個都按一次回車。','在{ordered}填採購單上的數量，在{picked}填實際揀到的數量。','這一行顯示{stMatch}後，點{review}，再看一遍，然後點{post}。'],tip:'兩個數字不一樣，或者已貼標的庫存不夠，都不能入賬。這是為了在發貨前攔住錯誤。'},
+{tab:'count',title:'查貨架：盤點',steps:['在{counted}填貨架上實際的箱數，還沒貼標的也要算上。沒有盤點的行留空。','{variance}會顯示每一行差多少。','如果有差異，填上{reason}，然後點{postAdj}。'],tip:'差額會記為一筆「調整」，賬面就和貨架一致了。'}
+],
+pagesTitle:'其他頁面',
+pages:[['stock','查每個商品還有多少。可以用搜索框快速找到。'],['reports','選 7、14 或 30 天，看進了多少、出了多少，以及倉庫有多滿。'],['customers','點客戶名稱，看這個客戶的訂單。頁面最下方可以新增客戶。'],['ledger','所有進出記錄，最新的在最上面。可以按類型篩選，也可以點{copyCsv}後粘貼到 Excel。']],
+faqTitle:'常見問題',
+faq:[
+['{onhand}、{awaiting}和{available}有什麼區別？','{onhand}是倉庫裡的全部箱數。{awaiting}是還沒貼好標籤的箱數。{available}是前者減去後者，也就是現在能發的箱數。'],
+['{st_low}和{st_out}是什麼意思？','{st_low}：可出庫數量低於安全庫存，該補貨了。{st_out}：現在沒有貨可以發。'],
+['為什麼{review}按鈕點不了？','還有內容沒填好。按鈕正上方的方框會列出要補的內容。'],
+['入賬後發現錄錯了，怎麼辦？','已入賬的記錄不能修改或刪除。還沒入賬的話，點{back}就能改。已經入賬的話，到{tab_count}填上正確的數量，差額會記為一筆「調整」。'],
+['為什麼防曬產品放行不了？','在加拿大，防曬產品按藥品管理，銷售前必須有 DIN 或 NPN。在這個演示裡，這個產品會一直顯示{jb_hold}。'],
+['我的數據存在哪裡？','只存在你現在用的這個瀏覽器裡。換電腦或換瀏覽器都看不到，清除瀏覽器數據也會把它刪掉。'],
+['怎麼清空重來？','點頁面最下面的{reset}，再點{resetYes}。你錄入的內容都會被清除。']
+]}
+};
 
 let L='en';
 try{const s=localStorage.getItem(KEY+'-lang');if(s&&I18N[s])L=s;}catch(e){}
@@ -960,6 +1055,18 @@ function csvText(){
   [...S.txns].sort((a,b)=>a.ts-b.ts).forEach(x=>x.lines.forEach(l=>{const p=prod(l.sku);rows.push([new Date(x.ts).toISOString(),x.type,x.ref,partnerName(x.partner),x.by,l.sku,p?p.name.en:'',(x.type==='OUT'?-1:1)*l.qty,x.note]);}));
   return rows.map(r=>r.map(q).join(',')).join('\n');
 }
+const gtxt=s=>esc(s).replace(/\{(\w+)\}/g,(m,k)=>`<b>${esc(t(k))}</b>`);
+function vGuide(){
+  const g=GUIDE[L];
+  return `<section class="panel"><h2>${esc(t('tab_guide'))}</h2><p class="lede">${esc(g.lede)}</p>
+    <h3>${esc(g.startTitle)}</h3><ol class="gsteps">${g.start.map(s=>`<li>${gtxt(s)}</li>`).join('')}</ol>
+    <h3>${esc(g.flowTitle)}</h3><div class="gflow">${g.flow.map(([k,s],i)=>`${i?'<div class="arr" aria-hidden="true">→</div>':''}<div><strong>${esc(t(k))}</strong><span>${esc(s)}</span></div>`).join('')}</div></section>
+  <div class="ggrid">${g.tasks.map(x=>`<section class="panel"><h3>${esc(x.title)}</h3><ol class="gsteps">${x.steps.map(s=>`<li>${gtxt(s)}</li>`).join('')}</ol>
+    <div class="check">${esc(g.resultLabel)}${gtxt(x.tip)}</div>
+    <button class="btn small" type="button" data-act="tab" data-tab="${x.tab}">${esc(g.go+t('tab_'+x.tab))}</button></section>`).join('')}</div>
+  <section class="panel"><h2>${esc(g.pagesTitle)}</h2><dl class="sum gpages">${g.pages.map(([k,s])=>`<dt><button class="btn small" type="button" data-act="tab" data-tab="${k}">${esc(t('tab_'+k))}</button></dt><dd style="font-weight:400">${gtxt(s)}</dd>`).join('')}</dl></section>
+  <section class="panel"><h2>${esc(g.faqTitle)}</h2><dl class="gfaq">${g.faq.map(([q,a])=>`<dt>${gtxt(q)}</dt><dd>${gtxt(a)}</dd>`).join('')}</dl></section>`;
+}
 
 /* ---------- render ---------- */
 function render(){
@@ -970,7 +1077,7 @@ function render(){
   const openJobs=S.jobs.filter(j=>!j.done).length;
   $('tabs').innerHTML=TABS.map(k=>`<button type="button" role="tab" aria-selected="${tab===k}" data-act="tab" data-tab="${k}">${esc(t('tab_'+k))}${k==='labels'&&openJobs?`<span class="badge">${openJobs}</span>`:''}</button>`).join('');
   $('skulist').innerHTML=S.products.map(p=>`<option value="${esc(p.sku)}">${esc(pname(p))}</option>`).join('');
-  const v={stock:vStock,reports:vReports,receive:()=>vEntry('receive'),labels:vLabels,ship:()=>vEntry('ship'),count:vCount,customers:vCustomers,ledger:vLedger}[tab];
+  const v={stock:vStock,reports:vReports,receive:()=>vEntry('receive'),labels:vLabels,ship:()=>vEntry('ship'),count:vCount,customers:vCustomers,ledger:vLedger,guide:vGuide}[tab];
   $('view').innerHTML=v();
   $('tip').hidden=true;
   $('reset-area').innerHTML=D.confirmReset
