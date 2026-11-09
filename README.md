@@ -2,7 +2,7 @@
 
 A lightweight inventory demo for a small import and wholesale business (hair care and beauty products), built as a single HTML page with no server.
 
-**Live demo:** _add your GitHub Pages link here_
+**Live demo:** https://leaves32.github.io/stockroom-ledger/
 
 ## What it shows
 
